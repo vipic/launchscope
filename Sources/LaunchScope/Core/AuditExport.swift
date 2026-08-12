@@ -60,8 +60,8 @@ enum AuditExporter {
         let safeItems = items.map { item in
             let annotation = annotations[item.privacySafeKey]
             return AuditExportItem(
-                name: item.source == .cron ? "Cron 任务" : item.displayName,
-                label: item.source == .cron ? "（已脱敏）" : item.label,
+                name: safeName(source: item.source, displayName: item.displayName),
+                label: isCommandSource(item.source) ? "（已脱敏）" : item.label,
                 source: item.source.title,
                 status: item.statusTitle,
                 signature: item.signature.kind.title,
@@ -104,10 +104,22 @@ enum AuditExporter {
         guard let item = change.item else { return nil }
         return AuditExportChange(
             kind: change.kind.title,
-            name: item.displayName,
+            name: safeName(source: item.source, displayName: item.displayName),
             source: item.source.title,
             changedFields: change.changedFields
         )
+    }
+
+    private static func safeName(source: StartupSource, displayName: String) -> String {
+        switch source {
+        case .cron: "Cron 任务"
+        case .shellConfiguration: "Shell 启动命令"
+        default: displayName
+        }
+    }
+
+    private static func isCommandSource(_ source: StartupSource) -> Bool {
+        source == .cron || source == .shellConfiguration
     }
 
     private static func csvField(_ value: String) -> String {

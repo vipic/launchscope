@@ -10,6 +10,7 @@ plist_template="$project_dir/Tests/ManualAcceptance/com.nekutai.launchscope.acce
 worker_download="/tmp/launchscope-acceptance-worker.sh"
 agent_path="$HOME/Library/LaunchAgents/com.nekutai.launchscope.acceptance.plist"
 shell_path="$HOME/.bashrc"
+report_path="/tmp/com.nekutai.launchscope.release-acceptance-report.json"
 domain="gui/$(id -u)"
 label="com.nekutai.launchscope.acceptance"
 state_dir="$(mktemp -d /tmp/launchscope-release-acceptance.XXXXXX)"
@@ -22,6 +23,7 @@ worker_created=0
 agent_created=0
 cron_created=0
 shell_created=0
+report_created=0
 
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
@@ -63,6 +65,7 @@ cleanup() {
   fi
   if test "$tap_created" -eq 1; then brew untap "$tap_name" >/dev/null 2>&1 || true; fi
   if test "$worker_created" -eq 1 && test -e "$worker_download"; then unlink "$worker_download"; fi
+  if test "$report_created" -eq 1 && test -f "$report_path"; then unlink "$report_path"; fi
   case "$state_dir" in
     /tmp/launchscope-release-acceptance.*) rm -R "$state_dir" ;;
     *) echo "拒绝清理非验收临时目录：$state_dir" >&2; cleanup_failed=1 ;;
@@ -74,6 +77,7 @@ trap cleanup EXIT
 cd "$project_dir"
 test ! -e "$agent_path" || { echo "验收 Agent 已存在：$agent_path" >&2; exit 1; }
 test ! -e "$shell_path" || { echo "为避免覆盖现有配置，验收要求 $shell_path 不存在。" >&2; exit 1; }
+test ! -e "$report_path" || { echo "验收报告路径已存在：$report_path" >&2; exit 1; }
 if crontab -l > "$state_dir/original-crontab" 2> "$state_dir/crontab-error"; then
   echo "为避免触碰现有任务，验收要求当前用户没有 crontab。" >&2
   exit 1
@@ -112,6 +116,18 @@ cp "$shell_fixture" "$shell_path"
 shell_created=1
 
 scripts/ui_smoke.sh --release-acceptance
+if test -s "$report_path"; then report_created=1; else echo "未生成验收审计报告。" >&2; exit 1; fi
+/usr/bin/python3 - "$report_path" <<'PY'
+import json, pathlib, sys
+path = pathlib.Path(sys.argv[1])
+document = json.loads(path.read_text())
+assert document["schemaVersion"] == 1
+assert document["items"]
+raw = path.read_text()
+assert "/opt/homebrew/opt/launchscope-acceptance" not in raw
+assert "--once" not in raw
+assert "/Users/" not in raw
+PY
 
 launchctl print "$domain/$label" >/dev/null
 brew services list --json | /usr/bin/python3 -c 'import json,sys; services=json.load(sys.stdin); item=next((x for x in services if x.get("name")=="launchscope-acceptance"), None); raise SystemExit(0 if item and item.get("status")=="started" else 1)'

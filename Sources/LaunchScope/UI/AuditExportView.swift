@@ -44,7 +44,9 @@ struct AuditExportView: View {
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }
-                Button("选择位置并导出") { save() }.buttonStyle(.borderedProminent)
+                Button("选择位置并导出") { save() }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("export.save")
             }
         }
         .padding(22)
@@ -68,6 +70,12 @@ struct AuditExportView: View {
                 scannedAt: scannedAt,
                 options: options
             )
+            if CommandLine.arguments.contains("--release-acceptance") {
+                let url = URL(fileURLWithPath: "/tmp/com.nekutai.launchscope.release-acceptance-report.json")
+                try data.write(to: url, options: .atomic)
+                dismiss()
+                return
+            }
             let panel = NSSavePanel()
             panel.nameFieldStringValue = "LaunchScope-审计报告.\(format.fileExtension)"
             panel.allowedContentTypes = format == .json ? [.json] : [.commaSeparatedText]

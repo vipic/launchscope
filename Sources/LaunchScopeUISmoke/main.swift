@@ -63,12 +63,38 @@ private func runReleaseAcceptance(root: AXUIElement) {
 
     press(waitForIdentifier("toolbar.export", root: root, timeout: 10), description: "导出审计报告")
     _ = waitForTitle("导出脱敏审计报告", root: root, timeout: 10)
-    press(waitForTitle("取消", root: root, timeout: 10), description: "关闭导出面板")
+    press(waitForTitle("选择位置并导出", root: root, timeout: 10), description: "写入脱敏审计报告")
+    verifyAcceptanceReport()
 
     press(waitForIdentifier("toolbar.display-options", root: root, timeout: 10), description: "显示选项")
     verifyNotificationAuthorization(root: root)
 
     print("发布 UI 验收通过：四类控制、恢复中心、导出入口与通知设置均可访问。")
+}
+
+private func verifyAcceptanceReport() {
+    let url = URL(fileURLWithPath: "/tmp/com.nekutai.launchscope.release-acceptance-report.json")
+    let deadline = Date().addingTimeInterval(10)
+    while !FileManager.default.fileExists(atPath: url.path), Date() < deadline {
+        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+    }
+    do {
+        let data = try Data(contentsOf: url)
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        guard object?["schemaVersion"] as? Int == 1,
+              let items = object?["items"] as? [[String: Any]], !items.isEmpty else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        let raw = String(decoding: data, as: UTF8.self)
+        let forbidden = ["/opt/homebrew/opt/launchscope-acceptance", "--once", "/Users/"]
+        guard !forbidden.contains(where: raw.contains) else {
+            throw CocoaError(.fileReadNoPermission)
+        }
+        print("审计报告验收通过：已实际写入 JSON，结构有效且未泄露测试命令或用户路径。")
+    } catch {
+        fputs("审计报告验收失败：\(error.localizedDescription)\n", stderr)
+        exit(1)
+    }
 }
 
 private func verifyNotificationAuthorization(root: AXUIElement) {

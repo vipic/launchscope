@@ -40,6 +40,29 @@ final class AuditAndAnnotationTests: XCTestCase {
         XCTAssertFalse(text.contains("private-note"))
     }
 
+    func testExportRedactsCronAndShellCommandsFromItemsAndChanges() throws {
+        let shell = ShellConfigScanner.parse(
+            "/private/tool --token top-secret\n",
+            path: "/Users/me/.zshrc"
+        )[0]
+        let cron = CronScanner.parse("@reboot /private/tool --token top-secret\n")[0]
+        let data = try AuditExporter.data(
+            format: .json,
+            items: [shell, cron],
+            annotations: [:],
+            issues: [],
+            changes: [ScanChange(kind: .added, before: nil, after: ScanSnapshotItem(item: shell), changedFields: [])],
+            scannedAt: nil,
+            options: AuditExportOptions()
+        )
+        let text = String(decoding: data, as: UTF8.self)
+
+        XCTAssertTrue(text.contains("Shell 启动命令"))
+        XCTAssertTrue(text.contains("Cron 任务"))
+        XCTAssertFalse(text.contains("/private/tool"))
+        XCTAssertFalse(text.contains("top-secret"))
+    }
+
     func testAnnotationPersistenceRoundTripUsesPrivacySafeKey() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let persistence = ItemAnnotationPersistence(fileURL: directory.appendingPathComponent("annotations.json"))
