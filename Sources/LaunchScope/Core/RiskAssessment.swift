@@ -12,7 +12,7 @@ enum RiskLevel: Int, Codable, Comparable, Sendable {
     var title: String {
         switch self {
         case .low: "低风险"
-        case .medium: "需关注"
+        case .medium: "中风险"
         case .high: "高风险"
         }
     }
@@ -82,6 +82,19 @@ struct RiskAssessment: Equatable, Sendable {
         }
         if isNew && !item.isAppleItem {
             raise(.medium, "这是相较上次扫描新增且尚未建立历史基线的第三方项目。")
+        }
+
+        switch item.runtime.state {
+        case .running:
+            reasons.append("项目当前正在运行，评级已考虑其活动状态。")
+        case .loaded:
+            reasons.append("项目当前已加载但未报告运行进程。")
+        case .disabled:
+            reasons.append("项目当前已停用；评级仍保留配置本身的持久化风险。")
+        case .notLoaded:
+            reasons.append("项目当前未加载；评级主要反映配置在下次触发时的风险。")
+        case .unknown:
+            reasons.append("当前无法确认运行状态，未据此降低评级。")
         }
 
         if reasons.isEmpty {

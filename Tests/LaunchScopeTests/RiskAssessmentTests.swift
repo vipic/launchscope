@@ -8,6 +8,20 @@ final class RiskAssessmentTests: XCTestCase {
         XCTAssertTrue(RiskLevel.high.requiresAttention)
     }
 
+    func testAssessmentExplainsRunningStateWithoutHidingOtherRisk() {
+        let item = StartupItem(
+            id: "running", label: "com.example.running", source: .userLaunchAgent,
+            signature: SignatureInfo(kind: .developerID), runtime: RuntimeInfo(state: .running),
+            targetExists: true
+        )
+
+        let assessment = RiskAssessment.assess(item)
+
+        XCTAssertEqual(assessment.level, .low)
+        XCTAssertTrue(assessment.reasons.contains { $0.contains("正在运行") })
+        XCTAssertEqual(RiskLevel.medium.title, "中风险")
+    }
+
     func testMissingTargetIsHighRiskWithResidualExplanation() {
         let item = StartupItem(
             id: "missing", label: "com.example.missing", source: .userLaunchAgent,
