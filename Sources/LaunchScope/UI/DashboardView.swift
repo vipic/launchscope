@@ -101,9 +101,6 @@ struct DashboardView: View {
                         set: { store.setNotificationsEnabled($0) }
                     ))
                     .accessibilityIdentifier("settings.notifications")
-                    if let error = store.notificationError {
-                        Text(error).foregroundStyle(.secondary)
-                    }
                     Divider()
                     Button("管理员辅助程序…") { showPrivilegedHelper = true }
                     Button("打开系统登录项设置") {
@@ -152,6 +149,20 @@ struct DashboardView: View {
                 .disabled(store.isScanning)
                 .help("运行 sfltool 读取系统后台项目；macOS 会要求管理员授权")
                 .accessibilityIdentifier("toolbar.background-tasks")
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if let error = store.notificationError {
+                HStack(spacing: 12) {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .accessibilityIdentifier("settings.notification-error")
+                    Spacer()
+                    Button("关闭") { store.dismissNotificationError() }
+                        .accessibilityIdentifier("settings.notification-error-dismiss")
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(.bar)
             }
         }
         .task { store.refreshIfNeeded() }

@@ -236,7 +236,7 @@ struct StartupItemController: Sendable {
             )
             let url = try secureCrontabFile(contents: Data(updated.utf8))
             defer { try? FileManager.default.removeItem(at: url) }
-            let install = runner.run(executable: "/usr/bin/crontab", arguments: [url.path], timeout: 4)
+            let install = runner.run(executable: "/usr/bin/crontab", arguments: [url.path], timeout: 10)
             guard install.exitCode == 0 else { return failureResult(action: action, phase: "更新 crontab", command: install) }
             return successResult(action: action, kind: "Cron 规则")
         } catch {

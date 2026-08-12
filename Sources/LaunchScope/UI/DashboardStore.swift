@@ -390,6 +390,10 @@ final class DashboardStore: ObservableObject {
         }
     }
 
+    func dismissNotificationError() {
+        notificationError = nil
+    }
+
     private func scheduleNewItemNotificationIfNeeded() {
         guard notificationsEnabled else { return }
         let eligible = scanChanges.compactMap { change -> (String, ScanSnapshotItem)? in

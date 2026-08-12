@@ -124,6 +124,7 @@ final class StartupItemControllerTests: XCTestCase {
         XCTAssertEqual(runner.calls.map(\.executable), ["/usr/bin/crontab", "/usr/bin/crontab"])
         XCTAssertEqual(runner.calls[0].arguments, ["-l"])
         XCTAssertTrue(runner.calls[1].arguments[0].hasPrefix("/tmp/com.nekutai.launchscope.crontab."))
+        XCTAssertEqual(runner.calls[1].timeout, 10)
         XCTAssertTrue(runner.calls[1].inputFileContents?.contains("LaunchScope disabled:v1") == true)
     }
 
