@@ -121,10 +121,43 @@ public struct PrivilegedLaunchItemPolicy: Sendable {
 public struct PrivilegedLaunchItemController: Sendable {
     public var runner: any PrivilegedCommandRunning
     public var policy: PrivilegedLaunchItemPolicy
+    public var daemonPolicy: PrivilegedLaunchItemPolicy
 
-    public init(runner: any PrivilegedCommandRunning = RootCommandRunner(), policy: PrivilegedLaunchItemPolicy = .init()) {
+    public init(
+        runner: any PrivilegedCommandRunning = RootCommandRunner(),
+        policy: PrivilegedLaunchItemPolicy = .init(),
+        daemonPolicy: PrivilegedLaunchItemPolicy = .init(allowedDirectory: "/Library/LaunchDaemons")
+    ) {
         self.runner = runner
         self.policy = policy
+        self.daemonPolicy = daemonPolicy
+    }
+
+    public func setDaemonEnabled(
+        path: String, label: String, expectedSHA256: String, enabled: Bool
+    ) -> PrivilegedOperationResult {
+        do { try daemonPolicy.validate(path: path, label: label, expectedSHA256: expectedSHA256) }
+        catch { return failure(error.localizedDescription) }
+        let override = runner.run(
+            executable: "/bin/launchctl",
+            arguments: [enabled ? "enable" : "disable", "system/\(label)"], timeout: 4
+        )
+        guard override.exitCode == 0 else { return failure("更新允许状态失败：\(commandMessage(override))") }
+        let runtime = runner.run(
+            executable: "/bin/launchctl",
+            arguments: enabled ? ["bootstrap", "system", path] : ["bootout", "system", path], timeout: 4
+        )
+        if runtime.exitCode == 0 {
+            return PrivilegedOperationResult(
+                outcome: "success",
+                title: enabled ? "已恢复 LaunchDaemon" : "已停用 LaunchDaemon",
+                message: enabled ? "已恢复系统允许状态并加载原配置。" : "已禁止系统后续加载并卸载当前任务；plist 保持不变。"
+            )
+        }
+        return PrivilegedOperationResult(
+            outcome: "partial", title: "允许状态已更新",
+            message: "运行状态更新失败：\(commandMessage(runtime))"
+        )
     }
 
     public func setGlobalAgentEnabled(

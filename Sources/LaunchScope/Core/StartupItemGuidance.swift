@@ -35,8 +35,8 @@ extension StartupItem {
             )
         case .launchDaemon:
             return StartupItemGuidance(
-                title: "需要管理员权限",
-                summary: "该项目作用于整个系统。当前阶段保持只读，建议优先使用所属应用的卸载器。",
+                title: isEnabled == false ? "可由管理员安全恢复" : "可由管理员安全停用",
+                summary: "该操作影响整个系统。辅助程序会独立校验配置、root 所有权、文件指纹和非 Apple 签名，且不会删除或改写 plist。",
                 diagnosticCommand: launchctlPrintCommand,
                 opensLoginItemSettings: false
             )

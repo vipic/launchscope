@@ -118,3 +118,10 @@
 - 主应用传递扫描时 SHA-256；辅助程序重新读取并校验路径无符号链接、完整文件指纹、Label、绝对执行路径和非 Apple 签名。
 - 辅助程序只执行固定参数数组的 `/bin/launchctl disable/enable` 与 `bootout/bootstrap`，不接收任意命令、参数数组或 shell 文本。
 - 任一验证失败时不得调用 launchctl；停用和恢复都不删除或改写 plist。
+
+## 第十三阶段：LaunchDaemon 控制
+
+- 只管理 `/Library/LaunchDaemons` 中 root 拥有的普通 plist，并固定使用 launchd `system` 域；操作影响整个系统，确认文案必须明确说明。
+- 沿用全局 Agent 的路径、符号链接、文件指纹、Label、绝对执行路径和 Apple 签名校验，任一失败不得调用 launchctl。
+- XPC 接口只接收 path、label、扫描指纹和目标开关；辅助程序自行构造固定的 `system/<label>` 与 `bootout/bootstrap` 参数。
+- 测试必须覆盖路径逃逸、符号链接、所有权错误、文件变化、危险 Label、Apple 目标、命令失败和超时。

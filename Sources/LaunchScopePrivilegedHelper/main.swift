@@ -28,6 +28,19 @@ private final class PrivilegedHelperService: NSObject, LaunchScopePrivilegedHelp
         )
         reply(result.outcome, result.title, result.message)
     }
+
+    func setLaunchDaemonEnabled(
+        path: String,
+        label: String,
+        expectedSHA256: String,
+        enabled: Bool,
+        reply: @escaping (String, String, String) -> Void
+    ) {
+        let result = controller.setDaemonEnabled(
+            path: path, label: label, expectedSHA256: expectedSHA256, enabled: enabled
+        )
+        reply(result.outcome, result.title, result.message)
+    }
 }
 
 private final class PrivilegedHelperListenerDelegate: NSObject, NSXPCListenerDelegate {

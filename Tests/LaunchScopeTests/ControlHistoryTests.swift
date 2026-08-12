@@ -13,6 +13,8 @@ final class ControlHistoryTests: XCTestCase {
         XCTAssertEqual(StartupItemControlAction.enableShellLine.inverse, .disableShellLine)
         XCTAssertEqual(StartupItemControlAction.disableGlobalAgent.inverse, .enableGlobalAgent)
         XCTAssertEqual(StartupItemControlAction.enableGlobalAgent.inverse, .disableGlobalAgent)
+        XCTAssertEqual(StartupItemControlAction.disableDaemon.inverse, .enableDaemon)
+        XCTAssertEqual(StartupItemControlAction.enableDaemon.inverse, .disableDaemon)
     }
 
     func testRecoveryActionClassification() {

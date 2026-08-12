@@ -11,6 +11,8 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
     case enableShellLine
     case disableGlobalAgent
     case enableGlobalAgent
+    case disableDaemon
+    case enableDaemon
 
     var title: String {
         switch self {
@@ -22,11 +24,13 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .enableCron, .enableShellLine: "恢复启用"
         case .disableGlobalAgent: "停用全局 Agent"
         case .enableGlobalAgent: "恢复全局 Agent"
+        case .disableDaemon: "停用 LaunchDaemon"
+        case .enableDaemon: "恢复 LaunchDaemon"
         }
     }
 
     var isDestructive: Bool {
-        self == .disable || self == .stopHomebrew || self == .disableCron || self == .disableShellLine || self == .disableGlobalAgent
+        self == .disable || self == .stopHomebrew || self == .disableCron || self == .disableShellLine || self == .disableGlobalAgent || self == .disableDaemon
     }
 
     var inverse: StartupItemControlAction {
@@ -41,6 +45,8 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .enableShellLine: .disableShellLine
         case .disableGlobalAgent: .enableGlobalAgent
         case .enableGlobalAgent: .disableGlobalAgent
+        case .disableDaemon: .enableDaemon
+        case .enableDaemon: .disableDaemon
         }
     }
 
@@ -56,6 +62,8 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .enableShellLine: "恢复这条 Shell 命令？"
         case .disableGlobalAgent: "停用当前用户的全局 LaunchAgent？"
         case .enableGlobalAgent: "恢复当前用户的全局 LaunchAgent？"
+        case .disableDaemon: "停用这个系统级 LaunchDaemon？"
+        case .enableDaemon: "恢复这个系统级 LaunchDaemon？"
         }
     }
 
@@ -81,6 +89,10 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
             "管理员辅助程序会重新校验 root 所有权、路径、文件指纹、Label 与非 Apple 执行目标，再停用当前用户的实例；不会改写 plist。"
         case .enableGlobalAgent:
             "管理员辅助程序会重新执行全部安全校验，再恢复当前用户的允许状态并加载原 plist。"
+        case .disableDaemon:
+            "该操作影响整个系统。辅助程序会重新校验 root 所有权、路径、指纹、Label 与非 Apple 目标，再停用并卸载任务；不会改写 plist。"
+        case .enableDaemon:
+            "该操作影响整个系统。辅助程序会重新执行全部安全校验，再恢复允许状态并加载原 plist。"
         }
     }
 }
@@ -115,6 +127,9 @@ struct StartupItemController: Sendable {
         if validatedGlobalAgent(for: item) != nil {
             return item.isEnabled == false ? .enableGlobalAgent : .disableGlobalAgent
         }
+        if validatedDaemon(for: item) != nil {
+            return item.isEnabled == false ? .enableDaemon : .disableDaemon
+        }
         if validatedTextLine(for: item, source: .cron) != nil {
             return item.isEnabled == false ? .enableCron : .disableCron
         }
@@ -144,6 +159,8 @@ struct StartupItemController: Sendable {
             return performShellLine(action, on: item)
         case .disableGlobalAgent, .enableGlobalAgent:
             return privilegedController.setGlobalAgentEnabled(item: item, enabled: action == .enableGlobalAgent)
+        case .disableDaemon, .enableDaemon:
+            return privilegedController.setDaemonEnabled(item: item, enabled: action == .enableDaemon)
         }
     }
 
@@ -179,7 +196,7 @@ struct StartupItemController: Sendable {
                 arguments: ["bootstrap", target.domain, sourcePath],
                 timeout: 4
             )
-        case .stopHomebrew, .startHomebrew, .disableCron, .enableCron, .disableShellLine, .enableShellLine, .disableGlobalAgent, .enableGlobalAgent:
+        case .stopHomebrew, .startHomebrew, .disableCron, .enableCron, .disableShellLine, .enableShellLine, .disableGlobalAgent, .enableGlobalAgent, .disableDaemon, .enableDaemon:
             return invalidTargetResult()
         }
 
@@ -280,6 +297,16 @@ struct StartupItemController: Sendable {
               item.runtime.domain == "gui/\(userIdentifier)",
               let path = item.sourcePath,
               URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path == "/Library/LaunchAgents",
+              let hash = item.controlMetadata["fileSHA256"], hash.count == 64 else { return nil }
+        return path
+    }
+
+    private func validatedDaemon(for item: StartupItem) -> String? {
+        guard item.source == .launchDaemon,
+              !item.isAppleItem,
+              item.runtime.domain == "system",
+              let path = item.sourcePath,
+              URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path == "/Library/LaunchDaemons",
               let hash = item.controlMetadata["fileSHA256"], hash.count == 64 else { return nil }
         return path
     }

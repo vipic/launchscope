@@ -32,6 +32,7 @@ LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd�
 - 按需对当前运行项目采样 CPU、常驻内存和运行时长，不启用持续后台监控
 - 使用 SMAppService 注册应用包内的管理员辅助程序，并通过代码签名要求双向验证 XPC 对端
 - 通过窄权限辅助接口安全停用或恢复当前用户的全局 LaunchAgent 实例
+- 通过相同的独立校验安全停用或恢复系统级非 Apple LaunchDaemon
 
 ## 开发
 

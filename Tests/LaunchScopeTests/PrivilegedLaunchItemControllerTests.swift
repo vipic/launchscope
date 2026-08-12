@@ -56,6 +56,93 @@ final class PrivilegedLaunchItemControllerTests: XCTestCase {
         ))
     }
 
+    func testDaemonUsesSystemDomainAndFixedArguments() throws {
+        let fixture = try makeFixture()
+        let runner = PrivilegedRecordingRunner(results: [
+            .init(output: "", error: "", exitCode: 0),
+            .init(output: "", error: "", exitCode: 0),
+        ])
+        let daemonPolicy = PrivilegedLaunchItemPolicy(
+            allowedDirectory: fixture.directory.path, requiredOwner: getuid(), appleSignatureChecker: { _ in false }
+        )
+        let controller = PrivilegedLaunchItemController(runner: runner, daemonPolicy: daemonPolicy)
+        let result = controller.setDaemonEnabled(
+            path: fixture.file.path, label: fixture.label, expectedSHA256: fixture.hash, enabled: false
+        )
+        XCTAssertEqual(result.outcome, "success")
+        XCTAssertEqual(runner.calls.map(\.arguments), [
+            ["disable", "system/com.example.global"],
+            ["bootout", "system", fixture.file.path],
+        ])
+    }
+
+    func testDaemonStopsAfterOverrideTimeout() throws {
+        let fixture = try makeFixture()
+        let runner = PrivilegedRecordingRunner(results: [
+            .init(output: "", error: "", exitCode: 124, timedOut: true),
+        ])
+        let daemonPolicy = PrivilegedLaunchItemPolicy(
+            allowedDirectory: fixture.directory.path, requiredOwner: getuid(), appleSignatureChecker: { _ in false }
+        )
+        let controller = PrivilegedLaunchItemController(runner: runner, daemonPolicy: daemonPolicy)
+        let result = controller.setDaemonEnabled(
+            path: fixture.file.path, label: fixture.label, expectedSHA256: fixture.hash, enabled: false
+        )
+        XCTAssertEqual(result.outcome, "failure")
+        XCTAssertTrue(result.message.contains("超时"))
+        XCTAssertEqual(runner.calls.count, 1)
+    }
+
+    func testDaemonReportsPartialResultWhenRuntimeUpdateFails() throws {
+        let fixture = try makeFixture()
+        let runner = PrivilegedRecordingRunner(results: [
+            .init(output: "", error: "", exitCode: 0),
+            .init(output: "", error: "service is busy", exitCode: 5),
+        ])
+        let daemonPolicy = PrivilegedLaunchItemPolicy(
+            allowedDirectory: fixture.directory.path, requiredOwner: getuid(), appleSignatureChecker: { _ in false }
+        )
+        let controller = PrivilegedLaunchItemController(runner: runner, daemonPolicy: daemonPolicy)
+        let result = controller.setDaemonEnabled(
+            path: fixture.file.path, label: fixture.label, expectedSHA256: fixture.hash, enabled: true
+        )
+        XCTAssertEqual(result.outcome, "partial")
+        XCTAssertTrue(result.message.contains("service is busy"))
+        XCTAssertEqual(runner.calls.map(\.arguments), [
+            ["enable", "system/com.example.global"],
+            ["bootstrap", "system", fixture.file.path],
+        ])
+    }
+
+    func testPolicyRejectsSymlinkAndWrongOwner() throws {
+        let fixture = try makeFixture()
+        let link = fixture.directory.appendingPathComponent("linked.plist")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: fixture.file)
+        let safePolicy = PrivilegedLaunchItemPolicy(
+            allowedDirectory: fixture.directory.path, requiredOwner: getuid(), appleSignatureChecker: { _ in false }
+        )
+        XCTAssertThrowsError(try safePolicy.validate(path: link.path, label: fixture.label, expectedSHA256: fixture.hash))
+        let wrongOwner = PrivilegedLaunchItemPolicy(
+            allowedDirectory: fixture.directory.path, requiredOwner: getuid() + 1, appleSignatureChecker: { _ in false }
+        )
+        XCTAssertThrowsError(try wrongOwner.validate(path: fixture.file.path, label: fixture.label, expectedSHA256: fixture.hash))
+    }
+
+    func testPolicyRejectsFileOutsideExactAllowedDirectory() throws {
+        let fixture = try makeFixture()
+        let otherDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: otherDirectory, withIntermediateDirectories: true)
+        let outsideFile = otherDirectory.appendingPathComponent("outside.plist")
+        try FileManager.default.copyItem(at: fixture.file, to: outsideFile)
+        addTeardownBlock { try? FileManager.default.removeItem(at: otherDirectory) }
+        let policy = PrivilegedLaunchItemPolicy(
+            allowedDirectory: fixture.directory.path, requiredOwner: getuid(), appleSignatureChecker: { _ in false }
+        )
+        XCTAssertThrowsError(
+            try policy.validate(path: outsideFile.path, label: fixture.label, expectedSHA256: fixture.hash)
+        )
+    }
+
     private func makeFixture() throws -> (directory: URL, file: URL, label: String, hash: String) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

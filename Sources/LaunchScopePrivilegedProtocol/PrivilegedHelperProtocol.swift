@@ -23,4 +23,11 @@ public enum PrivilegedServiceIdentity {
         enabled: Bool,
         reply: @escaping (String, String, String) -> Void
     )
+    func setLaunchDaemonEnabled(
+        path: String,
+        label: String,
+        expectedSHA256: String,
+        enabled: Bool,
+        reply: @escaping (String, String, String) -> Void
+    )
 }
