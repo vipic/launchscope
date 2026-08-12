@@ -10,7 +10,7 @@ fi
 
 project_dir="$(cd "$(dirname "$0")/.." && pwd)"
 identity="${CODESIGN_IDENTITY:-Nekutai}"
-runner="$project_dir/.build/debug/LaunchScopeUISmoke"
+runner="$project_dir/.build/debug/LaunchScopeReleaseSmoke"
 state_dir="$(mktemp -d /tmp/launchscope-release-smoke.XXXXXX)"
 mount_dir="$state_dir/mount"
 copy_dir="$state_dir/copy"
@@ -45,10 +45,10 @@ hdiutil detach "$mount_dir" >/dev/null
 mounted=0
 
 "$project_dir/scripts/verify_release.sh" "$app_dir" "$expected_version"
-swift build --package-path "$project_dir" --product LaunchScopeUISmoke >/dev/null
-codesign --force --sign "$identity" --identifier com.nekutai.launchscope.ui-smoke "$runner"
+swift build --package-path "$project_dir" --product LaunchScopeReleaseSmoke >/dev/null
+codesign --force --sign "$identity" --identifier com.nekutai.launchscope.release-smoke "$runner"
 
-open -n "$app_dir"
+open -n -F "$app_dir"
 for _ in {1..50}; do
   app_pid="$(pgrep -f "^$app_executable$" | head -1 || true)"
   [[ -n "$app_pid" ]] && break
@@ -56,4 +56,4 @@ for _ in {1..50}; do
 done
 [[ -n "$app_pid" ]] || { echo "无法定位从 DMG 启动的正式应用进程。" >&2; exit 1; }
 
-"$runner" --release-smoke --bundle-id com.nekutai.launchscope --pid "$app_pid"
+"$runner" --bundle-id com.nekutai.launchscope --pid "$app_pid"

@@ -28,7 +28,8 @@ mise run release -- 0.1.0
 - 脚本会拒绝脏工作区和已存在的版本标签。
 - 应用必须通过 bundle id、最低系统版本、图标、可执行文件及稳定签名检查。
 - DMG 必须通过 `hdiutil verify`，并生成同名 `.sha256` 校验文件。
-- 发布命令会从 DMG 复制并首次启动正式 bundle，通过签名 UI 驱动确认主窗口、关键导航、Dock `regular` 激活策略和非空图标。
+- 发布命令会从 DMG 复制并首次启动正式 bundle，通过精确进程与 WindowServer 清单确认可见主窗口、Dock `regular` 激活策略和非空图标。
+- 关键导航和控制级辅助功能自动化由 `mise run test:ui` 与 `mise run acceptance:release` 验证；正式制品验收不依赖非前台进程下不稳定的 AX 窗口桥接。
 
 ## 发布
 

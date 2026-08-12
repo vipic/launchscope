@@ -9,6 +9,7 @@ let package = Package(
         .executable(name: "LaunchScope", targets: ["LaunchScope"]),
         .executable(name: "LaunchScopePrivilegedHelper", targets: ["LaunchScopePrivilegedHelper"]),
         .executable(name: "LaunchScopeUISmoke", targets: ["LaunchScopeUISmoke"]),
+        .executable(name: "LaunchScopeReleaseSmoke", targets: ["LaunchScopeReleaseSmoke"]),
     ],
     dependencies: [],
     targets: [
@@ -43,6 +44,11 @@ let package = Package(
             name: "LaunchScopeUISmoke",
             path: "Sources/LaunchScopeUISmoke",
             linkerSettings: [.linkedFramework("ApplicationServices"), .linkedFramework("AppKit")]
+        ),
+        .executableTarget(
+            name: "LaunchScopeReleaseSmoke",
+            path: "Sources/LaunchScopeReleaseSmoke",
+            linkerSettings: [.linkedFramework("AppKit")]
         ),
     ],
     swiftLanguageModes: [.v5]
