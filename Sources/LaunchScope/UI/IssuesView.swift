@@ -1,7 +1,10 @@
 import SwiftUI
 
 struct IssuesView: View {
-    var issues: [ScanIssue]
+    @ObservedObject var store: DashboardStore
+    @FocusState private var focusedIssueID: UUID?
+
+    private var issues: [ScanIssue] { store.issues }
 
     var body: some View {
         Group {
@@ -18,11 +21,18 @@ struct IssuesView: View {
                         }
                     }
                     .padding(.vertical, 5)
+                    .focusable()
+                    .focused($focusedIssueID, equals: issue.id)
+                    .accessibilityIdentifier("scan-issue.\(issue.id.uuidString)")
                 }
                 .navigationTitle("扫描提示")
             }
         }
         .navigationSplitViewColumnWidth(min: 400, ideal: 470, max: 620)
+        .task(id: store.listFocusRequest) {
+            await Task.yield()
+            focusedIssueID = issues.first?.id
+        }
     }
 
     private func icon(for severity: ScanSeverity) -> String {

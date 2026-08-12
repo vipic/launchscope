@@ -5,6 +5,7 @@ import Foundation
 private let arguments = CommandLine.arguments
 private let bundleIdentifier = argumentValue(after: "--bundle-id") ?? "com.nekutai.launchscope.dev"
 private let requiredIdentifiers = [
+    "sidebar.all",
     "sidebar.thirdParty",
     "sidebar.highRisk",
     "toolbar.refresh",
@@ -40,8 +41,29 @@ if arguments.contains("--release-smoke") {
         fputs("UI 冒烟未找到控件：\(missing.joined(separator: "、"))\n", stderr)
         exit(1)
     }
-    press(discovered["sidebar.highRisk"]!, description: "高风险筛选")
-    print("UI 冒烟通过：主导航、风险筛选、刷新与审计时间线控件均可访问。")
+    press(discovered["sidebar.all"]!, description: "全部项目筛选")
+    let focusedIdentifier = waitForFocusedIdentifier(root: root, prefix: "startup-item.", timeout: 10)
+    print("UI 冒烟通过：主导航、筛选后列表焦点、刷新与审计时间线控件均可访问（\(focusedIdentifier)）。")
+}
+
+private func waitForFocusedIdentifier(
+    root: AXUIElement,
+    prefix: String,
+    timeout: TimeInterval
+) -> String {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+        var value: CFTypeRef?
+        if AXUIElementCopyAttributeValue(root, kAXFocusedUIElementAttribute as CFString, &value) == .success,
+           let element = value as! AXUIElement?,
+           let identifier = stringAttribute(kAXIdentifierAttribute, of: element),
+           identifier.hasPrefix(prefix) {
+            return identifier
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+    } while Date() < deadline
+    fputs("筛选后焦点未进入启动项列表。\n", stderr)
+    exit(1)
 }
 
 private func runReleaseSmoke(application: NSRunningApplication, root: AXUIElement) {

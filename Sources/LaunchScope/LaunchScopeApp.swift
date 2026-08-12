@@ -49,13 +49,13 @@ struct LaunchScopeApp: App {
         .commands {
             CommandGroup(replacing: .newItem) { }
             CommandMenu("筛选") {
-                Button("全部项目") { dashboardStore.selectedFilter = .all }
+                Button("全部项目") { dashboardStore.selectFilter(.all) }
                     .keyboardShortcut("1", modifiers: .command)
-                Button("第三方与自定义") { dashboardStore.selectedFilter = .thirdParty }
+                Button("第三方与自定义") { dashboardStore.selectFilter(.thirdParty) }
                     .keyboardShortcut("2", modifiers: .command)
-                Button("需要关注") { dashboardStore.selectedFilter = .highRisk }
+                Button("需要关注") { dashboardStore.selectFilter(.highRisk) }
                     .keyboardShortcut("3", modifiers: .command)
-                Button("冲突与残留") { dashboardStore.selectedFilter = .findings }
+                Button("冲突与残留") { dashboardStore.selectFilter(.findings) }
                     .keyboardShortcut("4", modifiers: .command)
             }
         }

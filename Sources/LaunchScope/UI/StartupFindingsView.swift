@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StartupFindingsView: View {
     @ObservedObject var store: DashboardStore
+    @FocusState private var focusedFindingID: String?
 
     var body: some View {
         Group {
@@ -32,10 +33,17 @@ struct StartupFindingsView: View {
                         }
                     }
                     .padding(.vertical, 6)
+                    .focusable()
+                    .focused($focusedFindingID, equals: finding.id)
+                    .accessibilityIdentifier("finding.\(finding.id)")
                 }
                 .navigationTitle("冲突与残留")
             }
         }
         .navigationSplitViewColumnWidth(min: 400, ideal: 470, max: 620)
+        .task(id: store.listFocusRequest) {
+            await Task.yield()
+            focusedFindingID = store.findings.first?.id
+        }
     }
 }

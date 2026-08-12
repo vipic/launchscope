@@ -4,6 +4,7 @@ struct StartupItemListView: View {
     @ObservedObject var store: DashboardStore
     var items: [StartupItem]
     var groupByOwner: Bool
+    @FocusState private var focusedItemID: String?
 
     var body: some View {
         Group {
@@ -23,6 +24,13 @@ struct StartupItemListView: View {
         .navigationSubtitle("\(items.count) 个项目")
         .frame(minWidth: UIConstants.listMinimumWidth)
         .navigationSplitViewColumnWidth(min: 400, ideal: 470, max: 620)
+        .task(id: store.listFocusRequest) {
+            await Task.yield()
+            focusedItemID = items.first?.id
+        }
+        .onChange(of: focusedItemID) { _, itemID in
+            if let itemID { store.selectedItemID = itemID }
+        }
     }
 
     private var flatList: some View {
@@ -83,6 +91,7 @@ struct StartupItemListView: View {
             }
         }
         .accessibilityIdentifier("startup-item.\(ScanSnapshotItem(item: item).key)")
+        .focused($focusedItemID, equals: item.id)
     }
 
     private func reveal(_ path: String) {

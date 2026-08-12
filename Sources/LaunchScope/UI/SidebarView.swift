@@ -56,8 +56,7 @@ struct SidebarView: View {
 
     private func sidebarButton(_ filter: DashboardFilter) -> some View {
         Button {
-            store.selectedFilter = filter
-            store.selectedItemID = nil
+            store.selectFilter(filter)
         } label: {
             HStack {
                 Label(filter.title, systemImage: filter.systemImage)

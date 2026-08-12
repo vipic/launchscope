@@ -38,6 +38,7 @@ final class DashboardStore: ObservableObject {
     @Published var selectedItemID: String?
     @Published var selectedFilter: DashboardFilter = .thirdParty
     @Published var searchText = ""
+    @Published private(set) var listFocusRequest = 0
 
     init(
         historyPersistence: any ControlHistoryPersisting = ControlHistoryPersistence(),
@@ -335,6 +336,12 @@ final class DashboardStore: ObservableObject {
         selectedFilter = .thirdParty
         searchText = ""
         selectedItemID = items.first { $0.source == source && $0.label == label }?.id
+    }
+
+    func selectFilter(_ filter: DashboardFilter) {
+        selectedFilter = filter
+        selectedItemID = nil
+        listFocusRequest &+= 1
     }
 
     func isNew(_ item: StartupItem) -> Bool {

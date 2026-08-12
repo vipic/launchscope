@@ -20,7 +20,7 @@ struct DashboardView: View {
             SidebarView(store: store)
         } content: {
             if store.selectedFilter == .issues {
-                IssuesView(issues: store.issues)
+                IssuesView(store: store)
             } else if store.selectedFilter == .findings {
                 StartupFindingsView(store: store)
             } else {
