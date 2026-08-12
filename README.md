@@ -53,7 +53,7 @@ mise run test:ui
 
 `deploy` 会组装 `~/Applications/LaunchScope Dev.app` 并使用 `${CODESIGN_IDENTITY:-Nekutai}` 签名。没有稳定证书时脚本会停止，不会使用 ad-hoc 签名；此时仍可通过 `mise run build` 和 `mise run test` 完成开发验证。
 
-正式发布使用 `mise run release -- <x.y.z>`。命令要求工作区干净，验收应用结构与稳定签名，验证 DMG，并生成 SHA-256 校验文件。完整流程见 [发布检查清单](docs/RELEASE_CHECKLIST.md)。
+正式发布使用 `mise run release -- <x.y.z>`。命令要求工作区干净，验收应用结构与稳定签名，验证 DMG 内的应用及 `/Applications` 拖放快捷入口，并生成 SHA-256 校验文件。完整流程见 [发布检查清单](docs/RELEASE_CHECKLIST.md)。
 
 ## 信息边界
 

@@ -39,6 +39,14 @@ security find-identity -v -p codesigning | grep -Fq "\"$identity\"" || {
 mkdir -p "$mount_dir" "$copy_dir"
 hdiutil attach "$dmg" -readonly -nobrowse -mountpoint "$mount_dir" >/dev/null
 mounted=1
+[[ -L "$mount_dir/Applications" ]] || {
+  echo "DMG 缺少 Applications 拖放快捷入口。" >&2
+  exit 1
+}
+[[ "$(readlink "$mount_dir/Applications")" == "/Applications" ]] || {
+  echo "DMG 的 Applications 快捷入口未指向 /Applications。" >&2
+  exit 1
+}
 ditto "$mount_dir/LaunchScope.app" "$app_dir"
 app_executable="$(realpath "$app_dir/Contents/MacOS/LaunchScope")"
 hdiutil detach "$mount_dir" >/dev/null

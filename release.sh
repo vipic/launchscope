@@ -66,7 +66,8 @@ scripts/verify_release.sh "$app_dir" "$version"
 
 dmg="$dist/LaunchScope-$version.dmg"
 rm -f "$dmg"
-hdiutil create -volname LaunchScope -srcfolder "$app_dir" -ov -format UDZO "$dmg" >/dev/null
+ln -s /Applications "$staging/Applications"
+hdiutil create -volname LaunchScope -srcfolder "$staging" -ov -format UDZO "$dmg" >/dev/null
 hdiutil verify "$dmg" >/dev/null
 shasum -a 256 "$dmg" > "$dmg.sha256"
 scripts/release_smoke.sh "$dmg" "$version"
