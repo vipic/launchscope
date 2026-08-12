@@ -22,7 +22,11 @@ fi
 
 cd "$project_dir"
 mise run check
-swift build -c release -Xswiftc -Osize
+test -z "$(git status --porcelain)" || { echo "工作区存在未提交改动，停止发布。" >&2; exit 1; }
+if git rev-parse "$version" >/dev/null 2>&1; then
+  echo "版本标签已存在：$version" >&2
+  exit 1
+fi
 
 rm -rf "$staging"
 mkdir -p "$contents/MacOS" "$contents/Resources" "$dist"
@@ -32,16 +36,19 @@ cp "scripts/Info.plist.template" "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $version" "$contents/Info.plist"
 codesign --force --deep --sign "$identity" "$app_dir"
-codesign --verify --deep --strict "$app_dir"
+scripts/verify_release.sh "$app_dir" "$version"
 
 dmg="$dist/LaunchScope-$version.dmg"
 rm -f "$dmg"
 hdiutil create -volname LaunchScope -srcfolder "$app_dir" -ov -format UDZO "$dmg" >/dev/null
+hdiutil verify "$dmg" >/dev/null
+shasum -a 256 "$dmg" > "$dmg.sha256"
 echo "发布产物：$dmg"
+echo "校验文件：$dmg.sha256"
 
 if [[ "$publish" == "--publish" ]]; then
   command -v gh >/dev/null || { echo "缺少 gh CLI" >&2; exit 1; }
   git tag "$version"
   git push origin "$version"
-  gh release create "$version" "$dmg" --generate-notes --title "LaunchScope $version"
+  gh release create "$version" "$dmg" "$dmg.sha256" --generate-notes --title "LaunchScope $version"
 fi

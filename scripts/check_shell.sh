@@ -9,6 +9,7 @@ scripts=(
   scripts/check_shell.sh
   scripts/check_coverage.sh
   scripts/publish.sh
+  scripts/verify_release.sh
 )
 
 for script in "${scripts[@]}"; do
