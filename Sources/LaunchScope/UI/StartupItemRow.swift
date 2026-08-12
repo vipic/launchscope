@@ -5,6 +5,7 @@ struct StartupItemRow: View {
     var isSelected: Bool
     var isTrusted: Bool
     var isNew: Bool
+    var riskAssessment: RiskAssessment
 
     var body: some View {
         HStack(alignment: .top, spacing: UIConstants.regularSpacing) {
@@ -35,6 +36,7 @@ struct StartupItemRow: View {
                         StatusBadge(title: "已信任", systemImage: "checkmark.shield", color: LaunchScopePalette.healthy)
                     }
                     StatusBadge(title: item.source.compactTitle, systemImage: item.source.systemImage)
+                    riskBadge
                     runtimeBadge
                     signatureBadge
                 }
@@ -47,6 +49,20 @@ struct StartupItemRow: View {
         .contentShape(Rectangle())
         .background(isSelected ? LaunchScopePalette.selectedFill : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: UIConstants.cornerRadius, style: .continuous))
+    }
+
+    private var riskBadge: some View {
+        let color: Color = switch riskAssessment.level {
+        case .low: LaunchScopePalette.healthy
+        case .medium: LaunchScopePalette.warning
+        case .high: .red
+        }
+        return StatusBadge(
+            title: riskAssessment.level.title,
+            systemImage: riskAssessment.level.systemImage,
+            color: color
+        )
+        .help(riskAssessment.reasons.joined(separator: "\n"))
     }
 
     private var secondaryText: String {

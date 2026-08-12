@@ -63,7 +63,8 @@ struct StartupItemListView: View {
                 item: item,
                 isSelected: store.selectedItemID == item.id,
                 isTrusted: store.isTrusted(item),
-                isNew: store.isNew(item)
+                isNew: store.isNew(item),
+                riskAssessment: store.riskAssessment(for: item)
             )
         }
         .buttonStyle(.plain)

@@ -15,6 +15,7 @@ struct StartupItemDetailView: View {
                     VStack(alignment: .leading, spacing: UIConstants.sectionSpacing) {
                         header(item)
                         identitySection(item)
+                        riskSection(item)
                         runtimeSection(item)
                         resourceSection(item)
                         annotationSection(item)
@@ -176,6 +177,21 @@ struct StartupItemDetailView: View {
             DetailRow(label: "应用路径", value: item.attribution?.bundlePath)
             DetailRow(label: "归因依据", value: item.attribution?.source)
             DetailRow(label: "Apple 项目", value: item.isAppleItem ? "是" : "否")
+        }
+    }
+
+    private func riskSection(_ item: StartupItem) -> some View {
+        let assessment = store.riskAssessment(for: item)
+        return DetailSection(title: "风险解释", systemImage: assessment.level.systemImage) {
+            DetailRow(label: "结论", value: assessment.level.title)
+            ForEach(Array(assessment.reasons.enumerated()), id: \.offset) { _, reason in
+                Label(reason, systemImage: "circle.fill")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            Text("评级只用于排序与审计提示，不会自动停用项目。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
