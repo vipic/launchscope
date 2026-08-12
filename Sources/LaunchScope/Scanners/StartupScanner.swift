@@ -37,10 +37,17 @@ struct StartupScanner: Sendable {
         let runtimeSnapshot = runtimeInspector.snapshot(
             domains: Set(items.compactMap { $0.runtime.domain })
         )
+        let disabledSnapshot = runtimeInspector.disabledServices(
+            domains: Set(items.compactMap { $0.runtime.domain })
+        )
 
         items = items.map { original in
             var item = original
             item.signature = signatureInspector.inspect(path: item.executablePath)
+            if let domain = item.runtime.domain,
+               let disabled = disabledSnapshot[domain]?[item.label] {
+                item.isEnabled = !disabled
+            }
             if let domain = item.runtime.domain,
                let runtime = runtimeSnapshot[domain]?[item.label] {
                 item.runtime = runtime

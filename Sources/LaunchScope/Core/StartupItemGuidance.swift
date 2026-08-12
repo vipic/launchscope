@@ -21,8 +21,8 @@ extension StartupItem {
         switch source {
         case .userLaunchAgent:
             return StartupItemGuidance(
-                title: "可安全停用",
-                summary: "建议先停止并观察影响，再决定是否长期停用。当前版本保持只读，可复制诊断命令核对 launchd 状态。",
+                title: isEnabled == false ? "可恢复启用" : "可安全停用",
+                summary: "LaunchScope 只修改当前用户的 launchd 允许状态并加载或卸载任务，不删除或改写 plist；操作后会重新扫描验证。",
                 diagnosticCommand: launchctlPrintCommand,
                 opensLoginItemSettings: false
             )

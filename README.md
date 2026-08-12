@@ -4,7 +4,7 @@ LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd�
 
 普通启动和“重新扫描”不会调用需要管理员授权的 `sfltool`。需要更新系统后台任务时，请点击工具栏中的“更新系统后台项目”；成功结果会缓存在 Application Support，后续启动直接展示。
 
-当前版本保持只读：除完整展示名称、图标、主应用、代码签名、执行参数、启动条件和运行状态外，也会按来源给出处置建议，并提供系统设置、Finder 与只读诊断命令入口。后续再加入带备份和回滚的安全停用流程。
+扫描与诊断默认保持只读。对于当前用户 `~/Library/LaunchAgents` 中的非 Apple 项目，LaunchScope 额外提供可恢复的停用与启用：只修改 launchd 允许状态并加载或卸载任务，不删除或改写 plist。
 
 ## 第一版能力
 
@@ -20,6 +20,7 @@ LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd�
 - 默认遮挡可能包含密码或令牌的配置值
 - 按来源说明推荐处置方式，并可打开系统登录项设置或定位所属应用与配置
 - 生成并复制经过参数转义的只读诊断命令，不在应用内直接修改启动项
+- 对当前用户的第三方 LaunchAgent 提供二次确认、自动复扫和可恢复的停用/启用
 
 ## 开发
 
@@ -37,8 +38,9 @@ mise run deploy
 
 - `sfltool dumpbtm` 在部分系统上可能阻塞，因此扫描设置了 8 秒上限；扫描始终在后台执行。
 - Shell 配置中的命令代表打开登录 Shell 或终端时可能执行，不一定属于严格意义的开机启动。
-- 第一版不会修改系统设置、plist 或 launchd 状态。
+- LaunchScope 不会删除、移动或改写启动项 plist；用户 LaunchAgent 的停用状态由 launchd override 管理。
 - “建议操作”中的命令仅用于读取状态；LaunchScope 不会自动执行这些命令。
+- 全局 Agent、Daemon、Apple 系统项目、Cron 与 Shell 配置仍保持只读。
 - 环境变量可能包含敏感内容，导出与复制能力尚未开放。
 - 指向 Documents、Desktop、Downloads、iCloud Drive 等受保护目录的项目只展示已注册路径，不主动读取目标文件，因此不会因后台扫描索要目录权限。
 

@@ -21,7 +21,11 @@ struct DashboardView: View {
                 )
             }
         } detail: {
-            StartupItemDetailView(item: store.selectedItem, showSensitiveValues: showSensitiveValues)
+            StartupItemDetailView(
+                store: store,
+                item: store.selectedItem,
+                showSensitiveValues: showSensitiveValues
+            )
         }
         .searchable(text: $store.searchText, placement: .toolbar, prompt: "搜索名称、标识、路径或参数")
         .toolbar {
@@ -64,6 +68,13 @@ struct DashboardView: View {
             }
         }
         .task { store.refreshIfNeeded() }
+        .alert(item: $store.controlResult) { result in
+            Alert(
+                title: Text(result.title),
+                message: Text(result.message),
+                dismissButton: .default(Text("好"))
+            )
+        }
         .frame(minWidth: 1050, minHeight: 660)
     }
 }

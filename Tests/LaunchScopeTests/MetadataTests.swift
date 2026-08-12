@@ -37,6 +37,18 @@ final class MetadataTests: XCTestCase {
         XCTAssertEqual(services["com.example.loaded"]?.lastExitCode, 7)
     }
 
+    func testParsesLaunchctlDisabledOverrides() {
+        let services = RuntimeInspector.parseDisabledServices("""
+        disabled services = {
+            "com.example.disabled" => disabled
+            "com.example.enabled" => enabled
+        }
+        """)
+
+        XCTAssertEqual(services["com.example.disabled"], true)
+        XCTAssertEqual(services["com.example.enabled"], false)
+    }
+
     func testFindsEnclosingApplicationBundle() {
         let url = AttributionResolver.enclosingAppURL(
             path: "/Applications/Example.app/Contents/Library/LoginItems/Helper.app/Contents/MacOS/Helper"

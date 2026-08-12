@@ -9,6 +9,8 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var scanDuration: TimeInterval?
     @Published private(set) var backgroundTasksUpdatedAt: Date?
     @Published private(set) var isRefreshingBackgroundTasks = false
+    @Published private(set) var controllingItemID: String?
+    @Published var controlResult: StartupItemControlResult?
     @Published var selectedItemID: String?
     @Published var selectedFilter: DashboardFilter = .thirdParty
     @Published var searchText = ""
@@ -37,21 +39,48 @@ final class DashboardStore: ObservableObject {
             let report = await Task.detached(priority: .userInitiated) {
                 StartupScanner().scan(refreshBackgroundTasks: refreshBackgroundTasks)
             }.value
-            items = report.items
-            issues = report.issues
-            scannedAt = report.scannedAt
-            scanDuration = report.duration
-            backgroundTasksUpdatedAt = report.backgroundTasksUpdatedAt
-            isScanning = false
-            isRefreshingBackgroundTasks = false
+            apply(report)
+        }
+    }
 
-            let visibleIDs = Set(filteredItems(hideAppleItems: false).map(\.id))
-            if let selectedItemID, !visibleIDs.contains(selectedItemID) {
-                self.selectedItemID = nil
-            }
-            if self.selectedItemID == nil {
-                self.selectedItemID = filteredItems(hideAppleItems: false).first?.id
-            }
+    func availableControlAction(for item: StartupItem) -> StartupItemControlAction? {
+        StartupItemController().availableAction(for: item)
+    }
+
+    func performControl(_ action: StartupItemControlAction, on item: StartupItem) {
+        guard controllingItemID == nil,
+              availableControlAction(for: item) == action else { return }
+
+        controllingItemID = item.id
+        isScanning = true
+        Task {
+            let result = await Task.detached(priority: .userInitiated) {
+                StartupItemController().perform(action, on: item)
+            }.value
+            let report = await Task.detached(priority: .userInitiated) {
+                StartupScanner().scan(refreshBackgroundTasks: false)
+            }.value
+            apply(report)
+            controllingItemID = nil
+            controlResult = result
+        }
+    }
+
+    private func apply(_ report: ScanReport) {
+        items = report.items
+        issues = report.issues
+        scannedAt = report.scannedAt
+        scanDuration = report.duration
+        backgroundTasksUpdatedAt = report.backgroundTasksUpdatedAt
+        isScanning = false
+        isRefreshingBackgroundTasks = false
+
+        let visibleIDs = Set(filteredItems(hideAppleItems: false).map(\.id))
+        if let selectedItemID, !visibleIDs.contains(selectedItemID) {
+            self.selectedItemID = nil
+        }
+        if self.selectedItemID == nil {
+            self.selectedItemID = filteredItems(hideAppleItems: false).first?.id
         }
     }
 

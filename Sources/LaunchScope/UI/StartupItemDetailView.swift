@@ -2,8 +2,10 @@ import SwiftUI
 import ServiceManagement
 
 struct StartupItemDetailView: View {
+    @ObservedObject var store: DashboardStore
     var item: StartupItem?
     var showSensitiveValues: Bool
+    @State private var pendingControlAction: StartupItemControlAction?
 
     var body: some View {
         Group {
@@ -28,6 +30,24 @@ struct StartupItemDetailView: View {
         .frame(minWidth: UIConstants.detailMinimumWidth)
         .navigationSplitViewColumnWidth(min: 420, ideal: 580)
         .background(Color(nsColor: .controlBackgroundColor))
+        .confirmationDialog(
+            confirmationTitle,
+            isPresented: Binding(
+                get: { pendingControlAction != nil },
+                set: { if !$0 { pendingControlAction = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let item, let action = pendingControlAction {
+                Button(action.title, role: action == .disable ? .destructive : nil) {
+                    pendingControlAction = nil
+                    store.performControl(action, on: item)
+                }
+                Button("取消", role: .cancel) { pendingControlAction = nil }
+            }
+        } message: {
+            Text(confirmationMessage)
+        }
     }
 
     private func actionSection(_ item: StartupItem) -> some View {
@@ -38,6 +58,12 @@ struct StartupItemDetailView: View {
                 Text(guidance.summary).font(.callout).foregroundStyle(.secondary)
 
                 HStack(spacing: UIConstants.regularSpacing) {
+                    if let action = store.availableControlAction(for: item) {
+                        Button(action.title, role: action == .disable ? .destructive : nil) {
+                            pendingControlAction = action
+                        }
+                        .disabled(store.controllingItemID != nil)
+                    }
                     if guidance.opensLoginItemSettings {
                         Button("打开登录项设置") {
                             SMAppService.openSystemSettingsLoginItems()
@@ -55,6 +81,21 @@ struct StartupItemDetailView: View {
                 }
                 .buttonStyle(.bordered)
             }
+        }
+    }
+
+    private var confirmationTitle: String {
+        guard let action = pendingControlAction else { return "确认操作" }
+        return action == .disable ? "停用这个 LaunchAgent？" : "恢复启用这个 LaunchAgent？"
+    }
+
+    private var confirmationMessage: String {
+        guard let action = pendingControlAction else { return "" }
+        return switch action {
+        case .disable:
+            "LaunchScope 会禁止该项目后续自动加载，并卸载当前任务；不会删除或改写 plist，可以随时恢复。"
+        case .enable:
+            "LaunchScope 会恢复 launchd 允许状态，并重新加载原有 plist。"
         }
     }
 

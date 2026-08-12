@@ -35,3 +35,11 @@
 - 可恢复停用、配置备份与回滚
 - JSON/CSV 脱敏导出
 - 资源占用与启动耗时观察
+
+## 第二阶段：可恢复控制
+
+- 仅允许操作当前用户 `~/Library/LaunchAgents` 目录中的非 Apple 项目。
+- 停用执行 launchd `disable` 与 `bootout`，恢复执行 `enable` 与 `bootstrap`。
+- 不删除、移动或改写原始 plist；每次操作前二次确认，操作后自动重新扫描。
+- `print-disabled` 的 override 状态与 Loaded、Running 分开显示，不能因停用而掩盖仍在运行的进程。
+- 全局 Agent、Daemon、系统项目、Homebrew、Cron、Shell 与后台任务暂不直接操作。
