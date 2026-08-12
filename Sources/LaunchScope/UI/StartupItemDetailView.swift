@@ -16,6 +16,7 @@ struct StartupItemDetailView: View {
                         header(item)
                         identitySection(item)
                         runtimeSection(item)
+                        resourceSection(item)
                         annotationSection(item)
                         actionSection(item)
                         launchSection(item)
@@ -55,6 +56,22 @@ struct StartupItemDetailView: View {
                 ItemAnnotationEditorView(item: item, annotation: store.annotation(for: item)) { note, tags, trusted in
                     store.saveAnnotation(for: item, note: note, tags: tags, isTrusted: trusted)
                 }
+            }
+        }
+    }
+
+    private func resourceSection(_ item: StartupItem) -> some View {
+        DetailSection(title: "资源观察", systemImage: "gauge.with.dots.needle.67percent") {
+            if let observation = store.resourceObservation(for: item) {
+                DetailRow(label: "CPU", value: observation.cpuPercent.formatted(.number.precision(.fractionLength(1))) + "%")
+                DetailRow(label: "内存", value: ByteCountFormatter.string(fromByteCount: Int64(observation.residentMemoryBytes), countStyle: .memory))
+                DetailRow(label: "运行时长", value: Duration.seconds(observation.elapsedSeconds).formatted(.time(pattern: .hourMinuteSecond)))
+                if let date = store.resourcesObservedAt {
+                    DetailRow(label: "采样时间", value: date.formatted(date: .omitted, time: .standard))
+                }
+            } else {
+                Text(item.runtime.processIdentifier == nil ? "该项目当前没有可观察的进程。" : "点击工具栏“观察资源”获取一次即时样本。")
+                    .font(.callout).foregroundStyle(.secondary)
             }
         }
     }

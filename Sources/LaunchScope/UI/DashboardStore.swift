@@ -27,6 +27,9 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var annotationPersistenceError: String?
     @Published private(set) var notificationsEnabled: Bool
     @Published private(set) var notificationError: String?
+    @Published private(set) var resourceObservations: [Int32: ResourceObservation] = [:]
+    @Published private(set) var resourcesObservedAt: Date?
+    @Published private(set) var isObservingResources = false
     @Published var selectedItemID: String?
     @Published var selectedFilter: DashboardFilter = .thirdParty
     @Published var searchText = ""
@@ -82,6 +85,29 @@ final class DashboardStore: ObservableObject {
 
     func refreshBackgroundTasks() {
         performScan(refreshBackgroundTasks: true)
+    }
+
+    func observeResources() {
+        guard !isObservingResources else { return }
+        let pids = Set(items.compactMap(\.runtime.processIdentifier))
+        guard !pids.isEmpty else {
+            resourceObservations = [:]
+            resourcesObservedAt = Date()
+            return
+        }
+        isObservingResources = true
+        Task {
+            let observations = await Task.detached(priority: .utility) {
+                ResourceObserver().observe(processIdentifiers: pids)
+            }.value
+            resourceObservations = observations
+            resourcesObservedAt = Date()
+            isObservingResources = false
+        }
+    }
+
+    func resourceObservation(for item: StartupItem) -> ResourceObservation? {
+        item.runtime.processIdentifier.flatMap { resourceObservations[$0] }
     }
 
     private func performScan(refreshBackgroundTasks: Bool) {

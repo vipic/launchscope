@@ -93,6 +93,18 @@ struct DashboardView: View {
                 .keyboardShortcut("r", modifiers: .command)
 
                 Button {
+                    store.observeResources()
+                } label: {
+                    if store.isObservingResources {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("观察资源", systemImage: "gauge.with.dots.needle.67percent")
+                    }
+                }
+                .disabled(store.isObservingResources || store.isScanning)
+                .help("对当前运行项目执行一次 ps 即时采样；不会持续后台监控")
+
+                Button {
                     store.refreshBackgroundTasks()
                 } label: {
                     if store.isRefreshingBackgroundTasks {
