@@ -53,7 +53,7 @@ struct LaunchScopeApp: App {
                     .keyboardShortcut("1", modifiers: .command)
                 Button("第三方与自定义") { dashboardStore.selectedFilter = .thirdParty }
                     .keyboardShortcut("2", modifiers: .command)
-                Button("高风险") { dashboardStore.selectedFilter = .highRisk }
+                Button("需要关注") { dashboardStore.selectedFilter = .highRisk }
                     .keyboardShortcut("3", modifiers: .command)
                 Button("冲突与残留") { dashboardStore.selectedFilter = .findings }
                     .keyboardShortcut("4", modifiers: .command)

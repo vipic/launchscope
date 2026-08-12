@@ -2,6 +2,12 @@ import XCTest
 @testable import LaunchScope
 
 final class RiskAssessmentTests: XCTestCase {
+    func testAttentionFilterIncludesMediumAndHighRiskOnly() {
+        XCTAssertFalse(RiskLevel.low.requiresAttention)
+        XCTAssertTrue(RiskLevel.medium.requiresAttention)
+        XCTAssertTrue(RiskLevel.high.requiresAttention)
+    }
+
     func testMissingTargetIsHighRiskWithResidualExplanation() {
         let item = StartupItem(
             id: "missing", label: "com.example.missing", source: .userLaunchAgent,

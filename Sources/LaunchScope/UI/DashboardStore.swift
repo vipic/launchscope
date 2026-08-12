@@ -286,7 +286,7 @@ final class DashboardStore: ObservableObject {
             case .missingTarget: filterMatches = item.targetExists == false
             case .disabled: filterMatches = item.isEnabled == false || item.runtime.state == .disabled
             case .untrusted: filterMatches = !item.isAppleItem && !isTrusted(item)
-            case .highRisk: filterMatches = riskAssessment(for: item).level == .high
+            case .highRisk: filterMatches = riskAssessment(for: item).level.requiresAttention
             case .findings: filterMatches = false
             case .issues: filterMatches = false
             case .source(let source): filterMatches = item.source == source
@@ -304,7 +304,7 @@ final class DashboardStore: ObservableObject {
         case .missingTarget: items.count { $0.targetExists == false }
         case .disabled: items.count { $0.isEnabled == false || $0.runtime.state == .disabled }
         case .untrusted: items.count { !$0.isAppleItem && !isTrusted($0) }
-        case .highRisk: items.count { riskAssessment(for: $0).level == .high }
+        case .highRisk: items.count { riskAssessment(for: $0).level.requiresAttention }
         case .findings: findings.count
         case .issues: issues.count
         case .source(let source): items.count { $0.source == source }

@@ -7,6 +7,8 @@ enum RiskLevel: Int, Codable, Comparable, Sendable {
 
     static func < (lhs: RiskLevel, rhs: RiskLevel) -> Bool { lhs.rawValue < rhs.rawValue }
 
+    var requiresAttention: Bool { self >= .medium }
+
     var title: String {
         switch self {
         case .low: "低风险"
