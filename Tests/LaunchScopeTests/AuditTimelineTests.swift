@@ -24,6 +24,24 @@ final class AuditTimelineTests: XCTestCase {
         XCTAssertEqual(events.first?.timestamp, Date(timeIntervalSince1970: 200))
     }
 
+    func testComparesTwoNonAdjacentScanDatesDirectly() {
+        let initialItem = item(id: "first", state: .running)
+        let first = snapshot([initialItem], time: 100)
+        let middle = snapshot([], time: 200)
+        var finalItem = initialItem
+        finalItem.runtime.state = .disabled
+        finalItem.isEnabled = false
+        let third = snapshot([finalItem, item(id: "added", state: .running)], time: 300)
+
+        let history = [first, middle, third]
+        let changes = ScanSnapshotDiff.compare(previous: history[0], current: history[2])
+
+        XCTAssertEqual(changes.count { $0.kind == .added }, 1)
+        XCTAssertEqual(changes.count { $0.kind == .removed }, 0)
+        XCTAssertEqual(changes.count { $0.kind == .changed }, 1)
+        XCTAssertTrue(changes.contains { $0.changedFields.contains("运行状态") })
+    }
+
     private func item(id: String, state: RuntimeState) -> StartupItem {
         StartupItem(
             id: id, label: "com.example.\(id)", source: .userLaunchAgent,
