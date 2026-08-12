@@ -292,7 +292,10 @@ final class DashboardStore: ObservableObject {
             case .issues: filterMatches = false
             case .source(let source): filterMatches = item.source == source
             }
-            return filterMatches && (query.isEmpty || searchableTextByID[item.id, default: item.searchableText].contains(query))
+            return filterMatches && StartupItemListData.matchesSearch(
+                query: query,
+                searchableText: searchableTextByID[item.id, default: item.searchableText]
+            )
         }
     }
 

@@ -42,7 +42,7 @@ struct StartupItemListView: View {
 
     private var groupedList: some View {
         List {
-            ForEach(groupedItems, id: \.name) { group in
+            ForEach(StartupItemListData.groups(for: items)) { group in
                 Section {
                     ForEach(group.items) { item in itemButton(item) }
                 } header: {
@@ -55,12 +55,6 @@ struct StartupItemListView: View {
             }
         }
         .listStyle(.inset)
-    }
-
-    private var groupedItems: [(name: String, items: [StartupItem])] {
-        Dictionary(grouping: items, by: \.groupName)
-            .map { (name: $0.key, items: $0.value) }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
     private func itemButton(_ item: StartupItem) -> some View {
