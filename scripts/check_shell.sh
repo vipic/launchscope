@@ -12,6 +12,7 @@ scripts=(
   scripts/verify_release.sh
   scripts/ui_smoke.sh
   scripts/release_acceptance.sh
+  scripts/release_smoke.sh
 )
 
 for script in "${scripts[@]}"; do

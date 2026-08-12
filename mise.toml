@@ -38,6 +38,10 @@ run = "scripts/ui_smoke.sh"
 description = "创建可回收测试项目并验收四类停用恢复流程"
 run = "scripts/release_acceptance.sh"
 
+[tasks."smoke:release"]
+description = "验收指定正式 DMG 的主窗口与 Dock 图标；参数为 DMG 路径和版本"
+run = "scripts/release_smoke.sh"
+
 [tasks.release]
 description = "构建签名 DMG；版本号通过 -- 传入"
 run = "./release.sh"

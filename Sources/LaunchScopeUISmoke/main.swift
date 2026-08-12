@@ -2,7 +2,8 @@ import AppKit
 import ApplicationServices
 import Foundation
 
-private let bundleIdentifier = "com.nekutai.launchscope.dev"
+private let arguments = CommandLine.arguments
+private let bundleIdentifier = argumentValue(after: "--bundle-id") ?? "com.nekutai.launchscope.dev"
 private let requiredIdentifiers = [
     "sidebar.thirdParty",
     "sidebar.highRisk",
@@ -16,13 +17,18 @@ guard AXIsProcessTrustedWithOptions(trustOptions) else {
     exit(77)
 }
 
-guard let application = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first else {
-    fputs("未找到已运行的 LaunchScope Dev.app；请先执行 mise run deploy。\n", stderr)
+let requestedPID = argumentValue(after: "--pid").flatMap(Int32.init)
+let application = requestedPID.flatMap { NSRunningApplication(processIdentifier: $0) }
+    ?? NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first
+guard let application else {
+    fputs("未找到已运行的 LaunchScope 应用（\(bundleIdentifier)）。\n", stderr)
     exit(1)
 }
 
 let root = AXUIElementCreateApplication(application.processIdentifier)
-if CommandLine.arguments.contains("--release-acceptance") {
+if arguments.contains("--release-smoke") {
+    runReleaseSmoke(application: application, root: root)
+} else if arguments.contains("--release-acceptance") {
     runReleaseAcceptance(root: root)
 } else if CommandLine.arguments.contains("--notification-acceptance") {
     press(waitForIdentifier("toolbar.display-options", root: root, timeout: 10), description: "显示选项")
@@ -36,6 +42,33 @@ if CommandLine.arguments.contains("--release-acceptance") {
     }
     press(discovered["sidebar.highRisk"]!, description: "高风险筛选")
     print("UI 冒烟通过：主导航、风险筛选、刷新与审计时间线控件均可访问。")
+}
+
+private func runReleaseSmoke(application: NSRunningApplication, root: AXUIElement) {
+    guard application.bundleIdentifier == bundleIdentifier else {
+        fputs("正式应用 bundle id 不匹配。\n", stderr)
+        exit(1)
+    }
+    guard application.activationPolicy == .regular else {
+        fputs("正式应用未以 Dock 常规应用策略运行。\n", stderr)
+        exit(1)
+    }
+    guard let icon = application.icon, icon.size.width > 0, icon.size.height > 0 else {
+        fputs("正式应用未加载 Dock 图标。\n", stderr)
+        exit(1)
+    }
+    let discovered = waitForIdentifiers(requiredIdentifiers, root: root, timeout: 15)
+    let missing = requiredIdentifiers.filter { discovered[$0] == nil }
+    guard missing.isEmpty else {
+        fputs("正式应用首次启动缺少控件：\(missing.joined(separator: "、"))\n", stderr)
+        exit(1)
+    }
+    print("正式应用验收通过：首次启动出现主窗口，Dock 策略为 regular，图标尺寸 \(Int(icon.size.width))×\(Int(icon.size.height))。")
+}
+
+private func argumentValue(after option: String) -> String? {
+    guard let index = arguments.firstIndex(of: option), arguments.indices.contains(index + 1) else { return nil }
+    return arguments[index + 1]
 }
 
 private func runReleaseAcceptance(root: AXUIElement) {

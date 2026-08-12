@@ -48,6 +48,7 @@ rm -f "$dmg"
 hdiutil create -volname LaunchScope -srcfolder "$app_dir" -ov -format UDZO "$dmg" >/dev/null
 hdiutil verify "$dmg" >/dev/null
 shasum -a 256 "$dmg" > "$dmg.sha256"
+scripts/release_smoke.sh "$dmg" "$version"
 echo "发布产物：$dmg"
 echo "校验文件：$dmg.sha256"
 
