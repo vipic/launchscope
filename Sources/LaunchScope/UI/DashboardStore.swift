@@ -3,6 +3,8 @@ import Foundation
 @MainActor
 final class DashboardStore: ObservableObject {
     private let historyPersistence: any ControlHistoryPersisting
+    private let snapshotPersistence: any ScanSnapshotPersisting
+    private var previousSnapshot: ScanSnapshot?
     @Published private(set) var items: [StartupItem] = []
     @Published private(set) var issues: [ScanIssue] = []
     @Published private(set) var isScanning = false
@@ -14,16 +16,28 @@ final class DashboardStore: ObservableObject {
     @Published var controlResult: StartupItemControlResult?
     @Published private(set) var controlHistory: [ControlHistoryEntry] = []
     @Published private(set) var historyPersistenceError: String?
+    @Published private(set) var scanChanges: [ScanChange] = []
+    @Published private(set) var comparisonScannedAt: Date?
+    @Published private(set) var snapshotPersistenceError: String?
     @Published var selectedItemID: String?
     @Published var selectedFilter: DashboardFilter = .thirdParty
     @Published var searchText = ""
 
-    init(historyPersistence: any ControlHistoryPersisting = ControlHistoryPersistence()) {
+    init(
+        historyPersistence: any ControlHistoryPersisting = ControlHistoryPersistence(),
+        snapshotPersistence: any ScanSnapshotPersisting = ScanSnapshotPersistence()
+    ) {
         self.historyPersistence = historyPersistence
+        self.snapshotPersistence = snapshotPersistence
         do {
             controlHistory = Array(try historyPersistence.load().prefix(100))
         } catch {
             historyPersistenceError = "无法读取操作历史：\(error.localizedDescription)"
+        }
+        do {
+            previousSnapshot = try snapshotPersistence.load()
+        } catch {
+            snapshotPersistenceError = "无法读取上次扫描快照：\(error.localizedDescription)"
         }
     }
 
@@ -150,6 +164,7 @@ final class DashboardStore: ObservableObject {
     }
 
     private func apply(_ report: ScanReport) {
+        updateSnapshot(with: report)
         items = report.items
         issues = report.issues
         scannedAt = report.scannedAt
@@ -164,6 +179,25 @@ final class DashboardStore: ObservableObject {
         }
         if self.selectedItemID == nil {
             self.selectedItemID = filteredItems(hideAppleItems: false).first?.id
+        }
+    }
+
+    private func updateSnapshot(with report: ScanReport) {
+        let current = ScanSnapshot(report: report)
+        if let previousSnapshot {
+            scanChanges = ScanSnapshotDiff.compare(previous: previousSnapshot, current: current)
+            comparisonScannedAt = previousSnapshot.scannedAt
+        } else {
+            scanChanges = []
+            comparisonScannedAt = nil
+        }
+        previousSnapshot = current
+
+        do {
+            try snapshotPersistence.save(current)
+            snapshotPersistenceError = nil
+        } catch {
+            snapshotPersistenceError = "无法保存扫描快照：\(error.localizedDescription)"
         }
     }
 

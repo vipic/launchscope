@@ -7,6 +7,7 @@ struct DashboardView: View {
     @AppStorage(PreferenceKeys.showSensitiveValues) private var showSensitiveValues = false
     @AppStorage(PreferenceKeys.groupByOwner) private var groupByOwner = true
     @State private var showControlHistory = false
+    @State private var showScanChanges = false
 
     var body: some View {
         NavigationSplitView {
@@ -31,6 +32,13 @@ struct DashboardView: View {
         .searchable(text: $store.searchText, placement: .toolbar, prompt: "搜索名称、标识、路径或参数")
         .toolbar {
             ToolbarItemGroup {
+                Button {
+                    showScanChanges = true
+                } label: {
+                    Label("扫描变化（\(store.scanChanges.count)）", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .help("查看与上一次完成扫描之间的脱敏差异")
+
                 Button {
                     showControlHistory = true
                 } label: {
@@ -77,6 +85,9 @@ struct DashboardView: View {
         .task { store.refreshIfNeeded() }
         .sheet(isPresented: $showControlHistory) {
             ControlHistoryView(store: store)
+        }
+        .sheet(isPresented: $showScanChanges) {
+            ScanChangesView(store: store)
         }
         .alert(item: $store.controlResult) { result in
             Alert(
