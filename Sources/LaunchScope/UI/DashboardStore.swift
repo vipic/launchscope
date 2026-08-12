@@ -9,6 +9,9 @@ final class DashboardStore: ObservableObject {
     private let notifier: any NewItemNotifying
     private var previousSnapshot: ScanSnapshot?
     private var notificationLedger = NotificationLedger()
+    private var newSnapshotKeys: Set<String> = []
+    private var searchableTextByID: [String: String] = [:]
+    private var riskAssessmentByID: [String: RiskAssessment] = [:]
     @Published private(set) var items: [StartupItem] = []
     @Published private(set) var issues: [ScanIssue] = []
     @Published private(set) var findings: [StartupFinding] = []
@@ -224,6 +227,14 @@ final class DashboardStore: ObservableObject {
         items = report.items
         issues = report.issues
         findings = StartupConflictDetector.detect(report.items)
+        newSnapshotKeys = Set(scanChanges.compactMap { change in
+            change.kind == .added ? change.after?.key : nil
+        })
+        searchableTextByID = Dictionary(uniqueKeysWithValues: report.items.map { ($0.id, $0.searchableText) })
+        riskAssessmentByID = Dictionary(uniqueKeysWithValues: report.items.map { item in
+            let isNew = newSnapshotKeys.contains(ScanSnapshotItem(item: item).key)
+            return (item.id, RiskAssessment.assess(item, isNew: isNew))
+        })
         scannedAt = report.scannedAt
         scanDuration = report.duration
         backgroundTasksUpdatedAt = report.backgroundTasksUpdatedAt
@@ -280,7 +291,7 @@ final class DashboardStore: ObservableObject {
             case .issues: filterMatches = false
             case .source(let source): filterMatches = item.source == source
             }
-            return filterMatches && (query.isEmpty || item.searchableText.contains(query))
+            return filterMatches && (query.isEmpty || searchableTextByID[item.id, default: item.searchableText].contains(query))
         }
     }
 
@@ -322,11 +333,11 @@ final class DashboardStore: ObservableObject {
 
     func isNew(_ item: StartupItem) -> Bool {
         let key = ScanSnapshotItem(item: item).key
-        return scanChanges.contains { $0.kind == .added && $0.after?.key == key }
+        return newSnapshotKeys.contains(key)
     }
 
     func riskAssessment(for item: StartupItem) -> RiskAssessment {
-        RiskAssessment.assess(item, isNew: isNew(item))
+        riskAssessmentByID[item.id] ?? RiskAssessment.assess(item, isNew: isNew(item))
     }
 
     var auditTimeline: [AuditTimelineEvent] {

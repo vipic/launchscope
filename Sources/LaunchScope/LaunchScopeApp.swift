@@ -48,6 +48,16 @@ struct LaunchScopeApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .newItem) { }
+            CommandMenu("筛选") {
+                Button("全部项目") { dashboardStore.selectedFilter = .all }
+                    .keyboardShortcut("1", modifiers: .command)
+                Button("第三方与自定义") { dashboardStore.selectedFilter = .thirdParty }
+                    .keyboardShortcut("2", modifiers: .command)
+                Button("高风险") { dashboardStore.selectedFilter = .highRisk }
+                    .keyboardShortcut("3", modifiers: .command)
+                Button("冲突与残留") { dashboardStore.selectedFilter = .findings }
+                    .keyboardShortcut("4", modifiers: .command)
+            }
         }
     }
 }

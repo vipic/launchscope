@@ -46,30 +46,38 @@ struct DashboardView: View {
                     Label("扫描变化（\(store.scanChanges.count)）", systemImage: "arrow.triangle.2.circlepath")
                 }
                 .help("查看与上一次完成扫描之间的脱敏差异")
+                .accessibilityIdentifier("toolbar.scan-changes")
 
                 Button {
                     showControlHistory = true
                 } label: {
                     Label("操作历史", systemImage: "clock.arrow.circlepath")
                 }
+                .accessibilityIdentifier("toolbar.control-history")
 
                 Button {
                     showAuditTimeline = true
                 } label: {
                     Label("审计时间线", systemImage: "clock")
                 }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
+                .accessibilityIdentifier("toolbar.audit-timeline")
 
                 Button {
                     showRecoveryCenter = true
                 } label: {
                     Label("恢复中心", systemImage: "lifepreserver")
                 }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
+                .accessibilityIdentifier("toolbar.recovery")
 
                 Button {
                     showAuditExport = true
                 } label: {
                     Label("导出审计报告", systemImage: "square.and.arrow.up")
                 }
+                .keyboardShortcut("e", modifiers: .command)
+                .accessibilityIdentifier("toolbar.export")
 
                 Menu {
                     Toggle("按所属应用归组", isOn: $groupByOwner)
@@ -91,6 +99,7 @@ struct DashboardView: View {
                 } label: {
                     Label("显示选项", systemImage: "slider.horizontal.3")
                 }
+                .accessibilityIdentifier("toolbar.display-options")
 
                 Button {
                     store.refresh()
@@ -103,6 +112,7 @@ struct DashboardView: View {
                 }
                 .disabled(store.isScanning)
                 .keyboardShortcut("r", modifiers: .command)
+                .accessibilityIdentifier("toolbar.refresh")
 
                 Button {
                     store.observeResources()
@@ -115,6 +125,7 @@ struct DashboardView: View {
                 }
                 .disabled(store.isObservingResources || store.isScanning)
                 .help("对当前运行项目执行一次 ps 即时采样；不会持续后台监控")
+                .accessibilityIdentifier("toolbar.observe-resources")
 
                 Button {
                     store.refreshBackgroundTasks()
@@ -127,6 +138,7 @@ struct DashboardView: View {
                 }
                 .disabled(store.isScanning)
                 .help("运行 sfltool 读取系统后台项目；macOS 会要求管理员授权")
+                .accessibilityIdentifier("toolbar.background-tasks")
             }
         }
         .task { store.refreshIfNeeded() }
@@ -163,6 +175,7 @@ struct DashboardView: View {
             )
         }
         .frame(minWidth: 1050, minHeight: 660)
+        .accessibilityIdentifier("dashboard.root")
     }
 
     private var visibleItems: [StartupItem] {

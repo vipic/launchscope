@@ -10,6 +10,7 @@ scripts=(
   scripts/check_coverage.sh
   scripts/publish.sh
   scripts/verify_release.sh
+  scripts/ui_smoke.sh
 )
 
 for script in "${scripts[@]}"; do

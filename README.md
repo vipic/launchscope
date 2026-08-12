@@ -36,6 +36,7 @@ LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd�
 - 以低风险、需关注和高风险呈现可解释评级，并逐条列出签名、权限、持久化与残留依据
 - 检测目标缺失残留、重复 Label/执行目标、Homebrew 与 launchd 重叠及重复 Shell 命令
 - 保留最近 30 次脱敏扫描快照，以时间线查看首次发现、状态变化、移除和控制操作，并可选择两个扫描点比较
+- 完善 VoiceOver 语义、键盘筛选与工具栏快捷键，并为 5,000 项数据分析和签名应用辅助功能 UI 冒烟提供自动化验收
 
 ## 开发
 
@@ -45,6 +46,9 @@ LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd�
 mise tasks
 mise run check
 mise run deploy
+
+# 需要辅助功能自动化权限；部署签名 Dev.app 后运行 UI 冒烟
+mise run test:ui
 ```
 
 `deploy` 会组装 `~/Applications/LaunchScope Dev.app` 并使用 `${CODESIGN_IDENTITY:-Nekutai}` 签名。没有稳定证书时脚本会停止，不会使用 ad-hoc 签名；此时仍可通过 `mise run build` 和 `mise run test` 完成开发验证。
@@ -57,7 +61,8 @@ mise run deploy
 - Shell 配置中的命令代表打开登录 Shell 或终端时可能执行，不一定属于严格意义的开机启动。
 - LaunchScope 不会删除、移动或改写启动项 plist；用户 LaunchAgent 的停用状态由 launchd override 管理。
 - “建议操作”中的命令仅用于读取状态；LaunchScope 不会自动执行这些命令。
-- 全局 Agent、Daemon、Apple 系统项目、Cron 与 Shell 配置仍保持只读；Homebrew 操作不会使用管理员权限。
+- Apple 系统项目保持只读；全局 Agent 与 LaunchDaemon 仅通过正式签名的窄权限辅助程序管理，Homebrew 操作不使用管理员权限。
+- Cron 与简单 Shell 单行支持带指纹校验的可逆停用；复杂控制结构、符号链接和不安全所有权继续保持只读。
 - 操作历史只记录项目标识、来源、动作、前后状态和结果，不记录路径、参数、环境变量或原始配置。
 - 扫描快照使用哈希稳定键，不保存路径、参数、环境变量、Cron 命令或原始配置。
 - 审计导出默认排除路径、参数、环境变量、原始配置、PID 与证书链；用户备注默认不导出。

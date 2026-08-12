@@ -49,6 +49,9 @@ struct StartupItemRow: View {
         .contentShape(Rectangle())
         .background(isSelected ? LaunchScopePalette.selectedFill : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: UIConstants.cornerRadius, style: .continuous))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(item.displayName)，\(item.source.title)，\(riskAssessment.level.title)，\(item.statusTitle)，签名 \(item.signature.kind.title)")
+        .accessibilityHint("打开项目详情")
     }
 
     private var riskBadge: some View {

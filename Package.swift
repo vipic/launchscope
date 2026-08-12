@@ -8,6 +8,7 @@ let package = Package(
     products: [
         .executable(name: "LaunchScope", targets: ["LaunchScope"]),
         .executable(name: "LaunchScopePrivilegedHelper", targets: ["LaunchScopePrivilegedHelper"]),
+        .executable(name: "LaunchScopeUISmoke", targets: ["LaunchScopeUISmoke"]),
     ],
     dependencies: [],
     targets: [
@@ -37,6 +38,11 @@ let package = Package(
             dependencies: ["LaunchScope", "LaunchScopePrivilegedProtocol", "LaunchScopePrivilegedCore"],
             path: "Tests/LaunchScopeTests",
             resources: [.copy("Fixtures")]
+        ),
+        .executableTarget(
+            name: "LaunchScopeUISmoke",
+            path: "Sources/LaunchScopeUISmoke",
+            linkerSettings: [.linkedFramework("ApplicationServices"), .linkedFramework("AppKit")]
         ),
     ],
     swiftLanguageModes: [.v5]

@@ -82,7 +82,7 @@ struct StartupItemListView: View {
                 NSPasteboard.general.setString(item.label, forType: .string)
             }
         }
-        .accessibilityIdentifier("startup-item.\(item.id)")
+        .accessibilityIdentifier("startup-item.\(ScanSnapshotItem(item: item).key)")
     }
 
     private func reveal(_ path: String) {
