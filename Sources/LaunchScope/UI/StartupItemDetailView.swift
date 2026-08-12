@@ -80,6 +80,11 @@ struct StartupItemDetailView: View {
                     }
                 }
                 .buttonStyle(.bordered)
+
+                if store.controllingItemID == item.id {
+                    ProgressView("正在执行操作并重新扫描…")
+                        .controlSize(.small)
+                }
             }
         }
     }

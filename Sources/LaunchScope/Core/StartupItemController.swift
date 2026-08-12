@@ -1,6 +1,6 @@
 import Foundation
 
-enum StartupItemControlAction: String, Equatable, Sendable {
+enum StartupItemControlAction: String, Codable, Equatable, Sendable {
     case disable
     case enable
     case stopHomebrew
@@ -17,6 +17,15 @@ enum StartupItemControlAction: String, Equatable, Sendable {
 
     var isDestructive: Bool {
         self == .disable || self == .stopHomebrew
+    }
+
+    var inverse: StartupItemControlAction {
+        switch self {
+        case .disable: .enable
+        case .enable: .disable
+        case .stopHomebrew: .startHomebrew
+        case .startHomebrew: .stopHomebrew
+        }
     }
 
     var confirmationTitle: String {
@@ -42,7 +51,7 @@ enum StartupItemControlAction: String, Equatable, Sendable {
     }
 }
 
-enum StartupItemControlOutcome: Equatable, Sendable {
+enum StartupItemControlOutcome: String, Codable, Equatable, Sendable {
     case success
     case partial
     case failure

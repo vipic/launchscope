@@ -22,6 +22,7 @@ LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd�
 - 生成并复制经过参数转义的只读诊断命令，不在应用内直接修改启动项
 - 对当前用户的第三方 LaunchAgent 提供二次确认、自动复扫和可恢复的停用/启用
 - 通过无 `sudo` 的 `brew services stop/start` 安全停止或启动当前用户 Homebrew 服务
+- 保存最近 100 条脱敏操作历史，并在当前状态仍匹配时提供安全撤销
 
 ## 开发
 
@@ -42,6 +43,7 @@ mise run deploy
 - LaunchScope 不会删除、移动或改写启动项 plist；用户 LaunchAgent 的停用状态由 launchd override 管理。
 - “建议操作”中的命令仅用于读取状态；LaunchScope 不会自动执行这些命令。
 - 全局 Agent、Daemon、Apple 系统项目、Cron 与 Shell 配置仍保持只读；Homebrew 操作不会使用管理员权限。
+- 操作历史只记录项目标识、来源、动作、前后状态和结果，不记录路径、参数、环境变量或原始配置。
 - 环境变量可能包含敏感内容，导出与复制能力尚未开放。
 - 指向 Documents、Desktop、Downloads、iCloud Drive 等受保护目录的项目只展示已注册路径，不主动读取目标文件，因此不会因后台扫描索要目录权限。
 

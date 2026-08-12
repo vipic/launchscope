@@ -2,6 +2,7 @@ import Foundation
 
 @MainActor
 final class DashboardStore: ObservableObject {
+    private let historyPersistence: any ControlHistoryPersisting
     @Published private(set) var items: [StartupItem] = []
     @Published private(set) var issues: [ScanIssue] = []
     @Published private(set) var isScanning = false
@@ -11,9 +12,20 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var isRefreshingBackgroundTasks = false
     @Published private(set) var controllingItemID: String?
     @Published var controlResult: StartupItemControlResult?
+    @Published private(set) var controlHistory: [ControlHistoryEntry] = []
+    @Published private(set) var historyPersistenceError: String?
     @Published var selectedItemID: String?
     @Published var selectedFilter: DashboardFilter = .thirdParty
     @Published var searchText = ""
+
+    init(historyPersistence: any ControlHistoryPersisting = ControlHistoryPersistence()) {
+        self.historyPersistence = historyPersistence
+        do {
+            controlHistory = Array(try historyPersistence.load().prefix(100))
+        } catch {
+            historyPersistenceError = "无法读取操作历史：\(error.localizedDescription)"
+        }
+    }
 
     /// SwiftUI may restart a view task when a window or scene becomes active again.
     /// Automatic discovery must run only once per application process because
@@ -47,7 +59,11 @@ final class DashboardStore: ObservableObject {
         StartupItemController().availableAction(for: item)
     }
 
-    func performControl(_ action: StartupItemControlAction, on item: StartupItem) {
+    func performControl(
+        _ action: StartupItemControlAction,
+        on item: StartupItem,
+        reversesEntryID: UUID? = nil
+    ) {
         guard controllingItemID == nil,
               availableControlAction(for: item) == action else { return }
 
@@ -60,10 +76,77 @@ final class DashboardStore: ObservableObject {
             let report = await Task.detached(priority: .userInitiated) {
                 StartupScanner().scan(refreshBackgroundTasks: false)
             }.value
+            let afterItem = report.items.first { $0.id == item.id }
             apply(report)
             controllingItemID = nil
-            controlResult = result
+            controlResult = recordControl(
+                action: action,
+                item: item,
+                afterItem: afterItem,
+                result: result,
+                reversesEntryID: reversesEntryID
+            )
         }
+    }
+
+    func canUndo(_ entry: ControlHistoryEntry) -> Bool {
+        guard controllingItemID == nil,
+              let item = items.first(where: { $0.controlHistoryKey == entry.itemID }) else { return false }
+        return ControlHistoryPolicy.canUndo(
+            entry,
+            in: controlHistory,
+            currentAction: availableControlAction(for: item)
+        )
+    }
+
+    func undo(_ entry: ControlHistoryEntry) {
+        guard canUndo(entry),
+              let action = entry.inverseAction,
+              let item = items.first(where: { $0.controlHistoryKey == entry.itemID }) else {
+            controlResult = StartupItemControlResult(
+                outcome: .failure,
+                title: "无法撤销",
+                message: "项目状态已变化或项目已不存在，请重新扫描后检查。"
+            )
+            return
+        }
+        performControl(action, on: item, reversesEntryID: entry.id)
+    }
+
+    private func recordControl(
+        action: StartupItemControlAction,
+        item: StartupItem,
+        afterItem: StartupItem?,
+        result: StartupItemControlResult,
+        reversesEntryID: UUID?
+    ) -> StartupItemControlResult {
+        var displayedResult = result
+        let entry = ControlHistoryEntry(
+            item: item,
+            afterItem: afterItem,
+            action: action,
+            result: result,
+            reversesEntryID: reversesEntryID
+        )
+
+        if result.outcome != .failure, let reversesEntryID,
+           let index = controlHistory.firstIndex(where: { $0.id == reversesEntryID }) {
+            controlHistory[index].reversedAt = entry.timestamp
+            controlHistory[index].reversedByEntryID = entry.id
+        }
+        controlHistory.insert(entry, at: 0)
+        if controlHistory.count > 100 {
+            controlHistory.removeLast(controlHistory.count - 100)
+        }
+
+        do {
+            try historyPersistence.save(controlHistory)
+            historyPersistenceError = nil
+        } catch {
+            historyPersistenceError = "无法保存操作历史：\(error.localizedDescription)"
+            displayedResult.message += "\n\n操作已执行，但历史记录保存失败。"
+        }
+        return displayedResult
     }
 
     private func apply(_ report: ScanReport) {

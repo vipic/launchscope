@@ -6,6 +6,7 @@ struct DashboardView: View {
     @AppStorage(PreferenceKeys.hideAppleItems) private var hideAppleItems = true
     @AppStorage(PreferenceKeys.showSensitiveValues) private var showSensitiveValues = false
     @AppStorage(PreferenceKeys.groupByOwner) private var groupByOwner = true
+    @State private var showControlHistory = false
 
     var body: some View {
         NavigationSplitView {
@@ -30,6 +31,12 @@ struct DashboardView: View {
         .searchable(text: $store.searchText, placement: .toolbar, prompt: "搜索名称、标识、路径或参数")
         .toolbar {
             ToolbarItemGroup {
+                Button {
+                    showControlHistory = true
+                } label: {
+                    Label("操作历史", systemImage: "clock.arrow.circlepath")
+                }
+
                 Menu {
                     Toggle("按所属应用归组", isOn: $groupByOwner)
                     Toggle("隐藏 Apple 项目", isOn: $hideAppleItems)
@@ -68,6 +75,9 @@ struct DashboardView: View {
             }
         }
         .task { store.refreshIfNeeded() }
+        .sheet(isPresented: $showControlHistory) {
+            ControlHistoryView(store: store)
+        }
         .alert(item: $store.controlResult) { result in
             Alert(
                 title: Text(result.title),
