@@ -125,6 +125,20 @@ final class StartupItemControllerTests: XCTestCase {
         XCTAssertEqual(runner.calls[0].arguments, ["-l"])
     }
 
+    func testCronRefusesToInstallWhenCrontabChangedAfterScan() {
+        let scanned = "@reboot /usr/local/bin/agent\n"
+        let runner = RecordingCommandRunner(results: [
+            CommandResult(standardOutput: "MAILTO=user@example.com\n\(scanned)", standardError: "", exitCode: 0, timedOut: false),
+        ])
+        let controller = makeController(runner: runner)
+        let item = CronScanner.parse(scanned)[0]
+
+        let result = controller.perform(.disableCron, on: item)
+        XCTAssertEqual(result.outcome, .failure)
+        XCTAssertEqual(runner.calls.count, 1)
+        XCTAssertTrue(result.message.contains("变化"))
+    }
+
     func testShellLineCanBeDisabledAndRestoredWithoutChangingOtherLines() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

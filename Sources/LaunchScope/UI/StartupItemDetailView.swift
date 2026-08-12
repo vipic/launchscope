@@ -128,7 +128,15 @@ struct StartupItemDetailView: View {
 
     private var confirmationMessage: String {
         guard let action = pendingControlAction else { return "" }
-        return action.confirmationMessage
+        guard let item else { return action.confirmationMessage }
+        switch action {
+        case .disableCron, .enableCron, .disableShellLine, .enableShellLine:
+            let target = item.sourcePath ?? item.source.title
+            let line = item.controlMetadata["line"].map { "第 \($0) 行" } ?? "目标行"
+            return "\(action.confirmationMessage)\n\n操作目标：\(target) · \(line)"
+        default:
+            return action.confirmationMessage
+        }
     }
 
     private func header(_ item: StartupItem) -> some View {

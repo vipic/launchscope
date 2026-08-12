@@ -7,6 +7,10 @@ final class ControlHistoryTests: XCTestCase {
         XCTAssertEqual(StartupItemControlAction.enable.inverse, .disable)
         XCTAssertEqual(StartupItemControlAction.stopHomebrew.inverse, .startHomebrew)
         XCTAssertEqual(StartupItemControlAction.startHomebrew.inverse, .stopHomebrew)
+        XCTAssertEqual(StartupItemControlAction.disableCron.inverse, .enableCron)
+        XCTAssertEqual(StartupItemControlAction.enableCron.inverse, .disableCron)
+        XCTAssertEqual(StartupItemControlAction.disableShellLine.inverse, .enableShellLine)
+        XCTAssertEqual(StartupItemControlAction.enableShellLine.inverse, .disableShellLine)
     }
 
     func testFailedEntryCannotBeUndone() {
