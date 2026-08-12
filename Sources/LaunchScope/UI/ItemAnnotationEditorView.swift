@@ -23,7 +23,7 @@ struct ItemAnnotationEditorView: View {
             Toggle("信任此项目", isOn: $isTrusted)
             TextField("标签（使用逗号分隔）", text: $tagsText)
             TextEditor(text: $note).frame(minHeight: 130).overlay {
-                RoundedRectangle(cornerRadius: 6).stroke(.separator)
+                RoundedRectangle(cornerRadius: UIConstants.compactSpacing).stroke(.separator)
             }
             Text("这里只保存来源与标识组成的脱敏键，不保存启动路径或配置内容。")
                 .font(.caption).foregroundStyle(.secondary)

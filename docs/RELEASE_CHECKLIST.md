@@ -8,6 +8,7 @@
 - 手动确认首次扫描、筛选、详情、报告导出、信任标记、恢复中心和资源观察。
 - 使用测试项目分别确认 LaunchAgent、Homebrew、Cron、Shell 的二次确认、停用、复扫和恢复。
 - 确认通知保持默认关闭，开启时由系统显示权限请求。
+- `mise run version:next` 可根据 Conventional Commits 给出建议版本；正式 `publish` 仍必须显式输入并复核版本号。
 
 专用测试项目可自动创建并在退出时恢复：
 
@@ -28,6 +29,7 @@ mise run release -- 0.1.0
 - 脚本会拒绝脏工作区和已存在的版本标签。
 - 应用必须通过 bundle id、最低系统版本、图标、可执行文件及稳定签名检查。
 - DMG 必须通过 `hdiutil verify`，盘面同时包含 `LaunchScope.app` 和指向 `/Applications` 的拖放快捷入口，并生成同名 `.sha256` 校验文件。
+- DMG 使用仓库内固定背景；发布脚本挂载最终可写镜像并由 Finder 现场生成布局，不复用绑定旧卷标识的 `.DS_Store`。执行时 Finder 会短暂打开并自动关闭 DMG 窗口。
 - 发布命令会从 DMG 复制并首次启动正式 bundle，通过精确进程与 WindowServer 清单确认可见主窗口、Dock `regular` 激活策略和非空图标。
 - 关键导航和控制级辅助功能自动化由 `mise run test:ui` 与 `mise run acceptance:release` 验证；正式制品验收不依赖非前台进程下不稳定的 AX 窗口桥接。
 
@@ -41,3 +43,7 @@ mise run publish -- 0.1.0
 - 标签推送或 Release 创建失败时回滚本轮创建的标签，避免留下半发布状态；已安全推送的源码分支保留。
 - 检查 GitHub Release 标题、自动生成说明和两个附件。
 - 保留上一版本安装包；出现严重问题时撤下新 Release，不自动覆盖用户审计数据。
+
+发布脚本不会覆盖已有 Release 或资产；每次执行的阶段耗时、退出码和完整命令输出写入 `.local/logs/release/` 或 `.local/logs/publish/`，可用 `mise run logs:release`、`mise run logs:publish` 查看。CI 不持有稳定签名私钥，因此只运行 `mise run check`，正式 DMG 必须在受控 Mac 本机构建。
+
+当前没有 Developer ID 公证。稳定自签名用于保持代码身份，但不能消除 Gatekeeper 首次打开提示；安装说明必须持续明确这个限制。

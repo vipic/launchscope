@@ -22,9 +22,13 @@ run = "scripts/check_coverage.sh 35"
 description = "检查仓库 Shell 脚本语法"
 run = "scripts/check_shell.sh"
 
+[tasks."lint:design"]
+description = "检查设计 token 使用"
+run = "scripts/check_design_tokens.sh"
+
 [tasks.check]
 description = "运行完整本地验证"
-run = "mise run lint:scripts && mise run test:coverage && mise run coverage && mise run build:release"
+run = "mise run lint:scripts && mise run lint:design && mise run test:coverage && mise run coverage && mise run build:release"
 
 [tasks.deploy]
 description = "构建、签名并启动 LaunchScope Dev.app"
@@ -34,6 +38,14 @@ run = "./deploy.sh"
 description = "部署签名应用并运行 UI 冒烟测试"
 run = "scripts/ui_smoke.sh"
 
+[tasks."snapshot:test"]
+description = "验证启动项列表视觉快照"
+run = "env LAUNCHSCOPE_SNAPSHOT_TESTS=1 swift test --filter StartupItemRowSnapshotTests"
+
+[tasks."snapshot:record"]
+description = "录制启动项列表视觉快照基线"
+run = "env LAUNCHSCOPE_RECORD_SNAPSHOTS=1 swift test --filter StartupItemRowSnapshotTests"
+
 [tasks."acceptance:release"]
 description = "创建可回收测试项目并验收四类停用恢复流程"
 run = "scripts/release_acceptance.sh"
@@ -42,10 +54,30 @@ run = "scripts/release_acceptance.sh"
 description = "验收指定正式 DMG 的主窗口与 Dock 图标；参数为 DMG 路径和版本"
 run = "scripts/release_smoke.sh"
 
+[tasks."version:current"]
+description = "显示当前正式版本标签"
+run = "git describe --tags --abbrev=0 2>/dev/null || echo 0.0.0"
+
+[tasks."version:next"]
+description = "根据 Conventional Commits 计算下一版本"
+run = "scripts/next_version.sh"
+
 [tasks.release]
-description = "构建签名 DMG；版本号通过 -- 传入"
+description = "构建签名 DMG；版本号与本地验收参数通过 -- 传入"
 run = "./release.sh"
+
+[tasks."release:auto"]
+description = "自动计算下一版本并构建签名 DMG"
+run = "./release.sh --auto-version"
 
 [tasks.publish]
 description = "构建并发布 GitHub Release；版本号通过 -- 传入"
 run = "scripts/publish.sh"
+
+[tasks."logs:release"]
+description = "查看最近一次本地发布日志；完整日志传 -- --full"
+run = "scripts/diagnostics.sh release"
+
+[tasks."logs:publish"]
+description = "查看最近一次 GitHub 发布日志；完整日志传 -- --full"
+run = "scripts/diagnostics.sh publish"

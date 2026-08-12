@@ -8,6 +8,10 @@ scripts=(
   release.sh
   scripts/check_shell.sh
   scripts/check_coverage.sh
+  scripts/check_design_tokens.sh
+  scripts/diagnostics.sh
+  scripts/lib/command_log.sh
+  scripts/next_version.sh
   scripts/publish.sh
   scripts/verify_release.sh
   scripts/ui_smoke.sh

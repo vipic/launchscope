@@ -103,6 +103,8 @@
 - 发布只能从干净工作区开始，拒绝已存在的版本标签，并继续使用稳定 Nekutai 签名链路。
 - 组装后检查应用结构、bundle id、最低系统版本、图标、可执行文件和非 ad-hoc 签名。
 - DMG 创建后执行完整性验证并生成 SHA-256；GitHub Release 同时上传 DMG 与校验文件。
+- 发布过程强制走统一验证、严格去除调试符号，并记录仅保存在本机的阶段耗时与完整命令日志。
+- Conventional Commits 只用于建议本地构建版本；正式发布仍要求人工显式确认版本，且不得覆盖同名 Release 或资产。
 - 发布前的真实控制流程验收必须使用专用测试项目，不得拿用户的重要启动项做试验。
 
 ## 第十一阶段：管理员辅助程序
@@ -150,4 +152,5 @@
 - 提供 Command-1 至 Command-4 快速筛选，以及刷新、导出、恢复中心和审计时间线快捷键。
 - 扫描完成后缓存搜索文本、新增集合和风险结果；自动测试覆盖 5,000 项分析预算。
 - `mise run test:ui` 部署稳定签名 Dev.app，再由 SwiftPM 原生辅助功能冒烟程序通过 bundle id 验证主导航与工具栏并执行筛选；不使用 AppleScript，也不新增 Xcode project。
+- `mise run snapshot:test` 使用 AppKit/SwiftUI 原生渲染验证典型运行项与缺失未签名项的列表视觉基线。
 - `mise run acceptance:release` 使用可回收的专用 formula、LaunchAgent、空白 crontab 与独立 Shell 文件，从真实 UI 走完四类停用、复扫和恢复，并从系统状态反向验收。

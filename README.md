@@ -49,11 +49,15 @@ mise run deploy
 
 # 需要辅助功能自动化权限；部署签名 Dev.app 后运行 UI 冒烟
 mise run test:ui
+# 验证启动项列表视觉快照
+mise run snapshot:test
 ```
 
 `deploy` 会组装 `~/Applications/LaunchScope Dev.app` 并使用 `${CODESIGN_IDENTITY:-Nekutai}` 签名。没有稳定证书时脚本会停止，不会使用 ad-hoc 签名；此时仍可通过 `mise run build` 和 `mise run test` 完成开发验证。
 
-正式发布使用 `mise run release -- <x.y.z>`。命令要求工作区干净，验收应用结构与稳定签名，验证 DMG 内的应用及 `/Applications` 拖放快捷入口，并生成 SHA-256 校验文件。完整流程见 [发布检查清单](docs/RELEASE_CHECKLIST.md)。
+正式发布使用 `mise run release -- <x.y.z>`；也可先用 `mise run version:next` 查看建议版本，或用 `mise run release:auto` 只构建本地制品。命令要求工作区干净，强制执行统一验证，验收应用结构与稳定签名，验证美化 DMG 内的应用及 `/Applications` 拖放快捷入口，并生成 SHA-256 校验文件。阶段耗时和完整命令输出保存在已忽略的 `.local/logs/`，可用 `mise run logs:release` 查看。完整流程见 [发布检查清单](docs/RELEASE_CHECKLIST.md)。
+
+当前公开制品使用稳定自签名证书，但没有 Apple Developer ID 公证。首次打开时可能遇到 Gatekeeper 提示，需要在系统设置中明确允许；CI 只执行源码与 release 编译验证，不生成或上传正式 DMG。
 
 ## 信息边界
 
