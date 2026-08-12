@@ -42,4 +42,11 @@
 - 停用执行 launchd `disable` 与 `bootout`，恢复执行 `enable` 与 `bootstrap`。
 - 不删除、移动或改写原始 plist；每次操作前二次确认，操作后自动重新扫描。
 - `print-disabled` 的 override 状态与 Loaded、Running 分开显示，不能因停用而掩盖仍在运行的进程。
-- 全局 Agent、Daemon、系统项目、Homebrew、Cron、Shell 与后台任务暂不直接操作。
+- 该阶段暂不直接操作全局 Agent、Daemon、系统项目、Homebrew、Cron、Shell 与后台任务。
+
+## 第三阶段：Homebrew 服务控制
+
+- 只操作无 `sudo` 的当前用户 Homebrew 服务，不管理 root LaunchDaemon。
+- 运行中的服务可执行 `brew services stop`，停止并取消登录启动；停止状态可执行 `brew services start` 恢复。
+- 服务名必须来自扫描结果并通过保守格式校验；命令使用参数数组执行，不经过 shell。
+- 操作前二次确认，命令设置 15 秒超时并捕获 stderr，操作后自动重新扫描。

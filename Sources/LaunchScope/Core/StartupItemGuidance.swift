@@ -43,8 +43,8 @@ extension StartupItem {
         case .homebrewService:
             let serviceName = configuration["服务名"] ?? displayName
             return StartupItemGuidance(
-                title: "使用 Homebrew 管理",
-                summary: "建议通过 brew services 停止或启动，避免手工修改 Homebrew 生成的启动配置。",
+                title: runtime.state == .running ? "可停止 Homebrew 服务" : "可启动 Homebrew 服务",
+                summary: "LaunchScope 通过当前用户的 brew services 停止或启动，不使用 sudo，也不手工修改 Homebrew 生成的配置。",
                 diagnosticCommand: "brew services info \(Self.shellQuote(serviceName))",
                 opensLoginItemSettings: false
             )

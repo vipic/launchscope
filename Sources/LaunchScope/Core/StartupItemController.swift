@@ -3,11 +3,41 @@ import Foundation
 enum StartupItemControlAction: String, Equatable, Sendable {
     case disable
     case enable
+    case stopHomebrew
+    case startHomebrew
 
     var title: String {
         switch self {
         case .disable: "停用"
         case .enable: "恢复启用"
+        case .stopHomebrew: "停止服务"
+        case .startHomebrew: "启动服务"
+        }
+    }
+
+    var isDestructive: Bool {
+        self == .disable || self == .stopHomebrew
+    }
+
+    var confirmationTitle: String {
+        switch self {
+        case .disable: "停用这个 LaunchAgent？"
+        case .enable: "恢复启用这个 LaunchAgent？"
+        case .stopHomebrew: "停止这个 Homebrew 服务？"
+        case .startHomebrew: "启动这个 Homebrew 服务？"
+        }
+    }
+
+    var confirmationMessage: String {
+        switch self {
+        case .disable:
+            "LaunchScope 会禁止该项目后续自动加载，并卸载当前任务；不会删除或改写 plist，可以随时恢复。"
+        case .enable:
+            "LaunchScope 会恢复 launchd 允许状态，并重新加载原有 plist。"
+        case .stopHomebrew:
+            "LaunchScope 会调用 brew services stop，立即停止服务并取消登录时自动启动；以后可以重新启动。"
+        case .startHomebrew:
+            "LaunchScope 会调用 brew services start，立即启动服务并注册为登录时自动启动。"
         }
     }
 }
@@ -29,19 +59,41 @@ struct StartupItemController: Sendable {
     var runner: any CommandRunning = CommandRunner()
     var homeDirectory = NSHomeDirectory()
     var userIdentifier = getuid()
+    var homebrewExecutable = HomebrewLocator.executablePath()
 
     func availableAction(for item: StartupItem) -> StartupItemControlAction? {
-        guard validatedTarget(for: item) != nil else { return nil }
-        return item.isEnabled == false ? .enable : .disable
+        if validatedLaunchAgentTarget(for: item) != nil {
+            return item.isEnabled == false ? .enable : .disable
+        }
+        if validatedHomebrewService(for: item) != nil {
+            return item.runtime.state == .running ? .stopHomebrew : .startHomebrew
+        }
+        return nil
     }
 
     func perform(_ action: StartupItemControlAction, on item: StartupItem) -> StartupItemControlResult {
-        guard let target = validatedTarget(for: item), let sourcePath = item.sourcePath else {
+        guard availableAction(for: item) == action else {
             return StartupItemControlResult(
                 outcome: .failure,
                 title: "无法执行操作",
-                message: "该项目不满足用户 LaunchAgent 的安全操作条件。"
+                message: "项目状态已变化，或该项目不满足安全操作条件。请重新扫描后再试。"
             )
+        }
+
+        switch action {
+        case .disable, .enable:
+            return performLaunchAgent(action, on: item)
+        case .stopHomebrew, .startHomebrew:
+            return performHomebrew(action, on: item)
+        }
+    }
+
+    private func performLaunchAgent(
+        _ action: StartupItemControlAction,
+        on item: StartupItem
+    ) -> StartupItemControlResult {
+        guard let target = validatedLaunchAgentTarget(for: item), let sourcePath = item.sourcePath else {
+            return invalidTargetResult()
         }
 
         let overrideVerb = action == .disable ? "disable" : "enable"
@@ -68,6 +120,8 @@ struct StartupItemController: Sendable {
                 arguments: ["bootstrap", target.domain, sourcePath],
                 timeout: 4
             )
+        case .stopHomebrew, .startHomebrew:
+            return invalidTargetResult()
         }
 
         if runtime.exitCode == 0 {
@@ -90,7 +144,32 @@ struct StartupItemController: Sendable {
         )
     }
 
-    private func validatedTarget(for item: StartupItem) -> (domain: String, serviceTarget: String)? {
+    private func performHomebrew(
+        _ action: StartupItemControlAction,
+        on item: StartupItem
+    ) -> StartupItemControlResult {
+        guard let service = validatedHomebrewService(for: item) else {
+            return invalidTargetResult()
+        }
+        let verb = action == .stopHomebrew ? "stop" : "start"
+        let command = runner.run(
+            executable: service.executable,
+            arguments: ["services", verb, service.name],
+            timeout: 15
+        )
+        guard command.exitCode == 0 else {
+            return failureResult(action: action, phase: "Homebrew 服务操作", command: command)
+        }
+        return StartupItemControlResult(
+            outcome: .success,
+            title: action == .stopHomebrew ? "服务已停止" : "服务已启动",
+            message: action == .stopHomebrew
+                ? "Homebrew 已停止该服务并取消登录时自动启动。"
+                : "Homebrew 已启动该服务并注册为登录时自动启动。"
+        )
+    }
+
+    private func validatedLaunchAgentTarget(for item: StartupItem) -> (domain: String, serviceTarget: String)? {
         guard item.source == .userLaunchAgent,
               !item.isAppleItem,
               !item.label.isEmpty,
@@ -107,6 +186,27 @@ struct StartupItemController: Sendable {
               sourceURL.deletingLastPathComponent().path == launchAgentsDirectory else { return nil }
 
         return (domain, "\(domain)/\(item.label)")
+    }
+
+    private func validatedHomebrewService(for item: StartupItem) -> (executable: String, name: String)? {
+        guard item.source == .homebrewService,
+              !item.isAppleItem,
+              let executable = homebrewExecutable else { return nil }
+        let name = item.configuration["服务名"] ?? item.displayName
+        guard name.count <= 200,
+              name.range(
+                of: #"^[A-Za-z0-9][A-Za-z0-9@+._-]*(/[A-Za-z0-9][A-Za-z0-9@+._-]*){0,2}$"#,
+                options: .regularExpression
+              ) != nil else { return nil }
+        return (executable, name)
+    }
+
+    private func invalidTargetResult() -> StartupItemControlResult {
+        StartupItemControlResult(
+            outcome: .failure,
+            title: "无法执行操作",
+            message: "该项目不满足安全操作条件。请重新扫描后再试。"
+        )
     }
 
     private func failureResult(

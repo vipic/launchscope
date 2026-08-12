@@ -17,9 +17,7 @@ struct HomebrewScanner: Sendable {
     var runner: any CommandRunning = CommandRunner()
 
     func scan() -> (items: [StartupItem], issues: [ScanIssue]) {
-        guard let brewPath = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].first(where: {
-            FileManager.default.isExecutableFile(atPath: $0)
-        }) else { return ([], []) }
+        guard let brewPath = HomebrewLocator.executablePath() else { return ([], []) }
 
         let result = runner.run(executable: brewPath, arguments: ["services", "list", "--json"], timeout: 5)
         if result.timedOut {

@@ -39,7 +39,7 @@ struct StartupItemDetailView: View {
             titleVisibility: .visible
         ) {
             if let item, let action = pendingControlAction {
-                Button(action.title, role: action == .disable ? .destructive : nil) {
+                Button(action.title, role: action.isDestructive ? .destructive : nil) {
                     pendingControlAction = nil
                     store.performControl(action, on: item)
                 }
@@ -59,7 +59,7 @@ struct StartupItemDetailView: View {
 
                 HStack(spacing: UIConstants.regularSpacing) {
                     if let action = store.availableControlAction(for: item) {
-                        Button(action.title, role: action == .disable ? .destructive : nil) {
+                        Button(action.title, role: action.isDestructive ? .destructive : nil) {
                             pendingControlAction = action
                         }
                         .disabled(store.controllingItemID != nil)
@@ -86,17 +86,12 @@ struct StartupItemDetailView: View {
 
     private var confirmationTitle: String {
         guard let action = pendingControlAction else { return "确认操作" }
-        return action == .disable ? "停用这个 LaunchAgent？" : "恢复启用这个 LaunchAgent？"
+        return action.confirmationTitle
     }
 
     private var confirmationMessage: String {
         guard let action = pendingControlAction else { return "" }
-        return switch action {
-        case .disable:
-            "LaunchScope 会禁止该项目后续自动加载，并卸载当前任务；不会删除或改写 plist，可以随时恢复。"
-        case .enable:
-            "LaunchScope 会恢复 launchd 允许状态，并重新加载原有 plist。"
-        }
+        return action.confirmationMessage
     }
 
     private func header(_ item: StartupItem) -> some View {

@@ -67,15 +67,69 @@ final class StartupItemControllerTests: XCTestCase {
         XCTAssertTrue(result.message.contains("未找到服务"))
     }
 
-    private func makeController(results: [CommandResult]) -> StartupItemController {
-        makeController(runner: RecordingCommandRunner(results: results))
+    func testHomebrewServiceOffersStateSpecificAction() {
+        let controller = makeController(results: [], homebrewExecutable: "/opt/homebrew/bin/brew")
+
+        XCTAssertEqual(controller.availableAction(for: makeHomebrewItem(state: .running)), .stopHomebrew)
+        XCTAssertEqual(controller.availableAction(for: makeHomebrewItem(state: .notLoaded)), .startHomebrew)
     }
 
-    private func makeController(runner: RecordingCommandRunner) -> StartupItemController {
+    func testHomebrewRejectsUnsafeServiceNameOrMissingExecutable() {
+        let controller = makeController(results: [], homebrewExecutable: "/opt/homebrew/bin/brew")
+        let missingBrew = makeController(results: [], homebrewExecutable: nil)
+
+        XCTAssertNil(controller.availableAction(for: makeHomebrewItem(name: "--all")))
+        XCTAssertNil(controller.availableAction(for: makeHomebrewItem(name: "redis;open /Applications")))
+        XCTAssertNil(missingBrew.availableAction(for: makeHomebrewItem()))
+    }
+
+    func testStopsHomebrewServiceWithoutShellOrSudo() {
+        let runner = RecordingCommandRunner(results: [.success()])
+        let controller = makeController(
+            runner: runner,
+            homebrewExecutable: "/opt/homebrew/bin/brew"
+        )
+
+        let result = controller.perform(.stopHomebrew, on: makeHomebrewItem(state: .running))
+
+        XCTAssertEqual(result.outcome, .success)
+        XCTAssertEqual(runner.calls.first?.executable, "/opt/homebrew/bin/brew")
+        XCTAssertEqual(runner.calls.first?.arguments, ["services", "stop", "ollama"])
+        XCTAssertEqual(runner.calls.first?.timeout, 15)
+    }
+
+    func testStartsHomebrewServiceAndReportsFailure() {
+        let runner = RecordingCommandRunner(results: [.failure("formula not installed")])
+        let controller = makeController(
+            runner: runner,
+            homebrewExecutable: "/opt/homebrew/bin/brew"
+        )
+
+        let result = controller.perform(.startHomebrew, on: makeHomebrewItem(state: .notLoaded))
+
+        XCTAssertEqual(result.outcome, .failure)
+        XCTAssertTrue(result.message.contains("formula not installed"))
+    }
+
+    private func makeController(
+        results: [CommandResult],
+        homebrewExecutable: String? = nil
+    ) -> StartupItemController {
+        makeController(
+            runner: RecordingCommandRunner(results: results),
+            homebrewExecutable: homebrewExecutable
+        )
+    }
+
+    private func makeController(
+        runner: RecordingCommandRunner,
+        homebrewExecutable: String? = nil
+    ) -> StartupItemController {
         StartupItemController(
             runner: runner,
             homeDirectory: "/Users/tester",
-            userIdentifier: 501
+            userIdentifier: 501,
+            homebrewExecutable: homebrewExecutable
         )
     }
 
@@ -93,6 +147,22 @@ final class StartupItemControllerTests: XCTestCase {
             runtime: RuntimeInfo(domain: domain),
             isEnabled: isEnabled,
             isAppleItem: isAppleItem
+        )
+    }
+
+    private func makeHomebrewItem(
+        name: String = "ollama",
+        state: RuntimeState = .running
+    ) -> StartupItem {
+        StartupItem(
+            id: "homebrew:\(name)",
+            label: "homebrew.mxcl.\(name)",
+            displayName: name,
+            source: .homebrewService,
+            configuration: ["服务名": name],
+            runtime: RuntimeInfo(state: state),
+            isEnabled: state == .running,
+            isAppleItem: false
         )
     }
 }

@@ -15,5 +15,6 @@ final class HomebrewScannerTests: XCTestCase {
         XCTAssertEqual(items[0].runtime.state, .running)
         XCTAssertEqual(items[1].runtime.state, .notLoaded)
         XCTAssertEqual(items[1].runtime.lastExitCode, 1)
+        XCTAssertEqual(items[0].configuration["服务名"], "ollama")
     }
 }
