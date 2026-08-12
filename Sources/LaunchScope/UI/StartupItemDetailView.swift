@@ -47,6 +47,7 @@ struct StartupItemDetailView: View {
                     pendingControlAction = nil
                     store.performControl(action, on: item)
                 }
+                .accessibilityIdentifier("confirmation.control")
                 Button("取消", role: .cancel) { pendingControlAction = nil }
             }
         } message: {
@@ -113,6 +114,7 @@ struct StartupItemDetailView: View {
                             pendingControlAction = action
                         }
                         .disabled(store.controllingItemID != nil)
+                        .accessibilityIdentifier("control.\(action.rawValue)")
                     }
                     if guidance.opensLoginItemSettings {
                         Button("打开登录项设置") {

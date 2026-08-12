@@ -13,4 +13,4 @@ if [[ "$identity" == "-" ]] || ! security find-identity -v -p codesigning | grep
   exit 1
 fi
 codesign --force --sign "$identity" --identifier com.nekutai.launchscope.ui-smoke "$runner"
-exec "$runner"
+exec "$runner" "$@"

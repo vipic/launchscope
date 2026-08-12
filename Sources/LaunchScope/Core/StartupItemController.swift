@@ -234,14 +234,32 @@ struct StartupItemController: Sendable {
                 expectedOriginal: target.original,
                 enable: action == .enableCron
             )
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("launchscope-crontab-\(UUID().uuidString)")
+            let url = try secureCrontabFile(contents: Data(updated.utf8))
             defer { try? FileManager.default.removeItem(at: url) }
-            try Data(updated.utf8).write(to: url, options: [.atomic])
             let install = runner.run(executable: "/usr/bin/crontab", arguments: [url.path], timeout: 4)
             guard install.exitCode == 0 else { return failureResult(action: action, phase: "更新 crontab", command: install) }
             return successResult(action: action, kind: "Cron 规则")
         } catch {
             return textFailure(error)
+        }
+    }
+
+    private func secureCrontabFile(contents: Data) throws -> URL {
+        var template = Array("/tmp/com.nekutai.launchscope.crontab.XXXXXX".utf8CString)
+        let descriptor = mkstemp(&template)
+        guard descriptor >= 0 else {
+            throw CocoaError(.fileWriteUnknown, userInfo: [NSLocalizedDescriptionKey: "无法创建安全的临时 crontab 文件。"])
+        }
+        let url = URL(fileURLWithPath: String(cString: template))
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        do {
+            try handle.write(contentsOf: contents)
+            try handle.close()
+            return url
+        } catch {
+            try? handle.close()
+            try? FileManager.default.removeItem(at: url)
+            throw error
         }
     }
 

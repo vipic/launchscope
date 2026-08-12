@@ -49,6 +49,7 @@ struct RecoveryCenterView: View {
             .toolbar { Button("完成") { dismiss() } }
         }
         .frame(minWidth: 720, minHeight: 520)
+        .accessibilityIdentifier("recovery.center")
         .confirmationDialog(
             pending?.action.confirmationTitle ?? "确认恢复",
             isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } }),

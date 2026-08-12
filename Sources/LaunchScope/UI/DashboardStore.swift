@@ -331,6 +331,12 @@ final class DashboardStore: ObservableObject {
 
     func isTrusted(_ item: StartupItem) -> Bool { annotation(for: item)?.isTrusted == true }
 
+    func selectAcceptanceItem(source: StartupSource, label: String) {
+        selectedFilter = .thirdParty
+        searchText = ""
+        selectedItemID = items.first { $0.source == source && $0.label == label }?.id
+    }
+
     func isNew(_ item: StartupItem) -> Bool {
         let key = ScanSnapshotItem(item: item).key
         return newSnapshotKeys.contains(key)

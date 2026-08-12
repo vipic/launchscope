@@ -34,6 +34,10 @@ run = "./deploy.sh"
 description = "部署签名应用并运行 UI 冒烟测试"
 run = "scripts/ui_smoke.sh"
 
+[tasks."acceptance:release"]
+description = "创建可回收测试项目并验收四类停用恢复流程"
+run = "scripts/release_acceptance.sh"
+
 [tasks.release]
 description = "构建签名 DMG；版本号通过 -- 传入"
 run = "./release.sh"

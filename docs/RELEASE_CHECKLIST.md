@@ -9,6 +9,16 @@
 - 使用测试项目分别确认 LaunchAgent、Homebrew、Cron、Shell 的二次确认、停用、复扫和恢复。
 - 确认通知保持默认关闭，开启时由系统显示权限请求。
 
+专用测试项目可自动创建并在退出时恢复：
+
+```bash
+mise run acceptance:release
+```
+
+- 命令只在当前用户没有 crontab 且 `~/.bashrc` 不存在时继续，避免覆盖现有配置。
+- 临时 formula、tap、LaunchAgent、crontab 和 Shell 行均使用 `launchscope-acceptance` 唯一标识；异常退出也会尝试清理。
+- UI 自动完成二次确认、停用、复扫与恢复，随后从 launchd、Homebrew、crontab 和文件内容反向验证恢复状态。
+
 ## 构建与产物
 
 ```bash

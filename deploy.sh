@@ -48,5 +48,13 @@ codesign --force --sign "$identity" --identifier com.nekutai.launchscope.helper 
 codesign --force --deep --sign "$identity" "$app_dir"
 touch "$app_dir"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$app_dir"
-open "$app_dir"
+if [[ -n "${LAUNCHSCOPE_APP_ARGUMENT:-}" ]]; then
+  [[ "$LAUNCHSCOPE_APP_ARGUMENT" == "--release-acceptance" ]] || {
+    echo "拒绝未知部署启动参数：$LAUNCHSCOPE_APP_ARGUMENT" >&2
+    exit 1
+  }
+  open "$app_dir" --args "$LAUNCHSCOPE_APP_ARGUMENT"
+else
+  open "$app_dir"
+fi
 echo "LaunchScope Dev 已部署：$app_dir"

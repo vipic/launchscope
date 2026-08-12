@@ -49,6 +49,7 @@ struct AuditExportView: View {
         }
         .padding(22)
         .frame(width: 620)
+        .accessibilityIdentifier("export.panel")
     }
 
     private func save() {

@@ -150,3 +150,4 @@
 - 提供 Command-1 至 Command-4 快速筛选，以及刷新、导出、恢复中心和审计时间线快捷键。
 - 扫描完成后缓存搜索文本、新增集合和风险结果；自动测试覆盖 5,000 项分析预算。
 - `mise run test:ui` 部署稳定签名 Dev.app，再由 SwiftPM 原生辅助功能冒烟程序通过 bundle id 验证主导航与工具栏并执行筛选；不使用 AppleScript，也不新增 Xcode project。
+- `mise run acceptance:release` 使用可回收的专用 formula、LaunchAgent、空白 crontab 与独立 Shell 文件，从真实 UI 走完四类停用、复扫和恢复，并从系统状态反向验收。

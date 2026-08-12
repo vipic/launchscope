@@ -123,6 +123,8 @@ final class StartupItemControllerTests: XCTestCase {
         XCTAssertEqual(controller.perform(.disableCron, on: item).outcome, .success)
         XCTAssertEqual(runner.calls.map(\.executable), ["/usr/bin/crontab", "/usr/bin/crontab"])
         XCTAssertEqual(runner.calls[0].arguments, ["-l"])
+        XCTAssertTrue(runner.calls[1].arguments[0].hasPrefix("/tmp/com.nekutai.launchscope.crontab."))
+        XCTAssertTrue(runner.calls[1].inputFileContents?.contains("LaunchScope disabled:v1") == true)
     }
 
     func testCronRefusesToInstallWhenCrontabChangedAfterScan() {
@@ -242,6 +244,7 @@ private final class RecordingCommandRunner: CommandRunning, @unchecked Sendable 
         var executable: String
         var arguments: [String]
         var timeout: TimeInterval
+        var inputFileContents: String?
     }
 
     private(set) var calls: [Call] = []
@@ -252,7 +255,8 @@ private final class RecordingCommandRunner: CommandRunning, @unchecked Sendable 
     }
 
     func run(executable: String, arguments: [String], timeout: TimeInterval) -> CommandResult {
-        calls.append(Call(executable: executable, arguments: arguments, timeout: timeout))
+        let input = arguments.first.flatMap { try? String(contentsOfFile: $0, encoding: .utf8) }
+        calls.append(Call(executable: executable, arguments: arguments, timeout: timeout, inputFileContents: input))
         guard !results.isEmpty else { return .failure("缺少测试结果") }
         return results.removeFirst()
     }

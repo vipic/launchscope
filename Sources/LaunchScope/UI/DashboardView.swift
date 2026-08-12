@@ -40,6 +40,18 @@ struct DashboardView: View {
         .searchable(text: $store.searchText, placement: .toolbar, prompt: "搜索名称、标识、路径或参数")
         .toolbar {
             ToolbarItemGroup {
+                if CommandLine.arguments.contains("--release-acceptance") {
+                    Menu {
+                        acceptanceButton("定位 LaunchAgent", source: .userLaunchAgent, label: "com.nekutai.launchscope.acceptance")
+                        acceptanceButton("定位 Homebrew", source: .homebrewService, label: "homebrew.mxcl.launchscope-acceptance")
+                        acceptanceButton("定位 Cron", source: .cron, label: "cron.1")
+                        acceptanceButton("定位 Shell", source: .shellConfiguration, label: "shell.bashrc.1")
+                    } label: {
+                        Label("验收定位", systemImage: "scope")
+                    }
+                    .accessibilityIdentifier("toolbar.acceptance")
+                }
+
                 Button {
                     showScanChanges = true
                 } label: {
@@ -88,6 +100,7 @@ struct DashboardView: View {
                         get: { store.notificationsEnabled },
                         set: { store.setNotificationsEnabled($0) }
                     ))
+                    .accessibilityIdentifier("settings.notifications")
                     if let error = store.notificationError {
                         Text(error).foregroundStyle(.secondary)
                     }
@@ -180,5 +193,10 @@ struct DashboardView: View {
 
     private var visibleItems: [StartupItem] {
         store.filteredItems(hideAppleItems: hideAppleItems, hideTrustedItems: hideTrustedItems)
+    }
+
+    private func acceptanceButton(_ title: String, source: StartupSource, label: String) -> some View {
+        Button(title) { store.selectAcceptanceItem(source: source, label: label) }
+            .disabled(!store.items.contains { $0.source == source && $0.label == label })
     }
 }
