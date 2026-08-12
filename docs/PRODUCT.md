@@ -111,3 +111,10 @@
 - 主应用使用 privileged Mach service 连接；主应用和辅助程序都必须在恢复 XPC 前通过固定标识与 Nekutai 证书要求验证对端。
 - 辅助程序必须以 root 身份运行才接受连接，协议版本不匹配时主应用拒绝继续。
 - 第一功能点只开放无副作用的连通性检查；任何全局启动项操作必须在后续窄接口中逐项加入和验收。
+
+## 第十二阶段：全局 LaunchAgent 控制
+
+- 只管理 `/Library/LaunchAgents` 中 root 拥有的普通 plist，并只影响发起请求用户的 `gui/<uid>` 域。
+- 主应用传递扫描时 SHA-256；辅助程序重新读取并校验路径无符号链接、完整文件指纹、Label、绝对执行路径和非 Apple 签名。
+- 辅助程序只执行固定参数数组的 `/bin/launchctl disable/enable` 与 `bootout/bootstrap`，不接收任意命令、参数数组或 shell 文本。
+- 任一验证失败时不得调用 launchctl；停用和恢复都不删除或改写 plist。

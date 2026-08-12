@@ -9,6 +9,8 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
     case enableCron
     case disableShellLine
     case enableShellLine
+    case disableGlobalAgent
+    case enableGlobalAgent
 
     var title: String {
         switch self {
@@ -18,11 +20,13 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .startHomebrew: "启动服务"
         case .disableCron, .disableShellLine: "安全停用"
         case .enableCron, .enableShellLine: "恢复启用"
+        case .disableGlobalAgent: "停用全局 Agent"
+        case .enableGlobalAgent: "恢复全局 Agent"
         }
     }
 
     var isDestructive: Bool {
-        self == .disable || self == .stopHomebrew || self == .disableCron || self == .disableShellLine
+        self == .disable || self == .stopHomebrew || self == .disableCron || self == .disableShellLine || self == .disableGlobalAgent
     }
 
     var inverse: StartupItemControlAction {
@@ -35,6 +39,8 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .enableCron: .disableCron
         case .disableShellLine: .enableShellLine
         case .enableShellLine: .disableShellLine
+        case .disableGlobalAgent: .enableGlobalAgent
+        case .enableGlobalAgent: .disableGlobalAgent
         }
     }
 
@@ -48,6 +54,8 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .enableCron: "恢复这条 Cron 规则？"
         case .disableShellLine: "停用这条 Shell 命令？"
         case .enableShellLine: "恢复这条 Shell 命令？"
+        case .disableGlobalAgent: "停用当前用户的全局 LaunchAgent？"
+        case .enableGlobalAgent: "恢复当前用户的全局 LaunchAgent？"
         }
     }
 
@@ -69,6 +77,10 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
             "LaunchScope 会确认文件归当前用户所有且目标行未变化，再原子地注释这一行；不会执行其中的命令。"
         case .enableShellLine:
             "LaunchScope 只会恢复由自身标记且内容完全匹配的 Shell 行；文件变化时会拒绝覆盖。"
+        case .disableGlobalAgent:
+            "管理员辅助程序会重新校验 root 所有权、路径、文件指纹、Label 与非 Apple 执行目标，再停用当前用户的实例；不会改写 plist。"
+        case .enableGlobalAgent:
+            "管理员辅助程序会重新执行全部安全校验，再恢复当前用户的允许状态并加载原 plist。"
         }
     }
 }
@@ -91,6 +103,7 @@ struct StartupItemController: Sendable {
     var homeDirectory = NSHomeDirectory()
     var userIdentifier = getuid()
     var homebrewExecutable = HomebrewLocator.executablePath()
+    var privilegedController: any PrivilegedControlling = PrivilegedHelperClient()
 
     func availableAction(for item: StartupItem) -> StartupItemControlAction? {
         if validatedLaunchAgentTarget(for: item) != nil {
@@ -98,6 +111,9 @@ struct StartupItemController: Sendable {
         }
         if validatedHomebrewService(for: item) != nil {
             return item.runtime.state == .running ? .stopHomebrew : .startHomebrew
+        }
+        if validatedGlobalAgent(for: item) != nil {
+            return item.isEnabled == false ? .enableGlobalAgent : .disableGlobalAgent
         }
         if validatedTextLine(for: item, source: .cron) != nil {
             return item.isEnabled == false ? .enableCron : .disableCron
@@ -126,6 +142,8 @@ struct StartupItemController: Sendable {
             return performCron(action, on: item)
         case .disableShellLine, .enableShellLine:
             return performShellLine(action, on: item)
+        case .disableGlobalAgent, .enableGlobalAgent:
+            return privilegedController.setGlobalAgentEnabled(item: item, enabled: action == .enableGlobalAgent)
         }
     }
 
@@ -161,7 +179,7 @@ struct StartupItemController: Sendable {
                 arguments: ["bootstrap", target.domain, sourcePath],
                 timeout: 4
             )
-        case .stopHomebrew, .startHomebrew, .disableCron, .enableCron, .disableShellLine, .enableShellLine:
+        case .stopHomebrew, .startHomebrew, .disableCron, .enableCron, .disableShellLine, .enableShellLine, .disableGlobalAgent, .enableGlobalAgent:
             return invalidTargetResult()
         }
 
@@ -254,6 +272,16 @@ struct StartupItemController: Sendable {
         let standardized = URL(fileURLWithPath: path).standardizedFileURL.path
         guard allowed.contains(standardized) else { return nil }
         return (standardized, line.lineNumber, line.original, line.fingerprint)
+    }
+
+    private func validatedGlobalAgent(for item: StartupItem) -> String? {
+        guard item.source == .globalLaunchAgent,
+              !item.isAppleItem,
+              item.runtime.domain == "gui/\(userIdentifier)",
+              let path = item.sourcePath,
+              URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path == "/Library/LaunchAgents",
+              let hash = item.controlMetadata["fileSHA256"], hash.count == 64 else { return nil }
+        return path
     }
 
     private func successResult(action: StartupItemControlAction, kind: String) -> StartupItemControlResult {

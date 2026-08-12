@@ -22,14 +22,19 @@ let package = Package(
             name: "LaunchScopePrivilegedProtocol",
             path: "Sources/LaunchScopePrivilegedProtocol"
         ),
+        .target(
+            name: "LaunchScopePrivilegedCore",
+            path: "Sources/LaunchScopePrivilegedCore",
+            linkerSettings: [.linkedFramework("Security")]
+        ),
         .executableTarget(
             name: "LaunchScopePrivilegedHelper",
-            dependencies: ["LaunchScopePrivilegedProtocol"],
+            dependencies: ["LaunchScopePrivilegedProtocol", "LaunchScopePrivilegedCore"],
             path: "Sources/LaunchScopePrivilegedHelper"
         ),
         .testTarget(
             name: "LaunchScopeTests",
-            dependencies: ["LaunchScope", "LaunchScopePrivilegedProtocol"],
+            dependencies: ["LaunchScope", "LaunchScopePrivilegedProtocol", "LaunchScopePrivilegedCore"],
             path: "Tests/LaunchScopeTests",
             resources: [.copy("Fixtures")]
         ),

@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 struct LaunchdLocation: Sendable {
     var path: String
@@ -51,7 +52,12 @@ struct LaunchdScanner: Sendable {
                         ) as? [String: Any] else {
                             throw ScanError.invalidPropertyList
                         }
-                        items.append(Self.makeItem(plist: plist, file: file, location: location))
+                        var item = Self.makeItem(plist: plist, file: file, location: location)
+                        if location.source == .globalLaunchAgent || location.source == .launchDaemon {
+                            item.controlMetadata["fileSHA256"] = SHA256.hash(data: data)
+                                .map { String(format: "%02x", $0) }.joined()
+                        }
+                        items.append(item)
                     } catch {
                         issues.append(ScanIssue(
                             source: file.path,

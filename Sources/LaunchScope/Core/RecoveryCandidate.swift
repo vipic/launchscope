@@ -9,8 +9,8 @@ struct RecoveryCandidate: Identifiable, Sendable {
 extension StartupItemControlAction {
     var isRecoveryAction: Bool {
         switch self {
-        case .enable, .enableCron, .enableShellLine, .startHomebrew: true
-        case .disable, .disableCron, .disableShellLine, .stopHomebrew: false
+        case .enable, .enableCron, .enableShellLine, .startHomebrew, .enableGlobalAgent: true
+        case .disable, .disableCron, .disableShellLine, .stopHomebrew, .disableGlobalAgent: false
         }
     }
 }

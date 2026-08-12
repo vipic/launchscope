@@ -11,6 +11,8 @@ final class ControlHistoryTests: XCTestCase {
         XCTAssertEqual(StartupItemControlAction.enableCron.inverse, .disableCron)
         XCTAssertEqual(StartupItemControlAction.disableShellLine.inverse, .enableShellLine)
         XCTAssertEqual(StartupItemControlAction.enableShellLine.inverse, .disableShellLine)
+        XCTAssertEqual(StartupItemControlAction.disableGlobalAgent.inverse, .enableGlobalAgent)
+        XCTAssertEqual(StartupItemControlAction.enableGlobalAgent.inverse, .disableGlobalAgent)
     }
 
     func testRecoveryActionClassification() {

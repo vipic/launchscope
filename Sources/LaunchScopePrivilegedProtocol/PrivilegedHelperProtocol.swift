@@ -16,4 +16,11 @@ public enum PrivilegedServiceIdentity {
 
 @objc public protocol LaunchScopePrivilegedHelperProtocol {
     func ping(reply: @escaping (Int, String) -> Void)
+    func setGlobalLaunchAgentEnabled(
+        path: String,
+        label: String,
+        expectedSHA256: String,
+        enabled: Bool,
+        reply: @escaping (String, String, String) -> Void
+    )
 }

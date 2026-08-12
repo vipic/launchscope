@@ -26,10 +26,17 @@ extension StartupItem {
                 diagnosticCommand: launchctlPrintCommand,
                 opensLoginItemSettings: false
             )
-        case .globalLaunchAgent, .launchDaemon:
+        case .globalLaunchAgent:
+            return StartupItemGuidance(
+                title: isEnabled == false ? "可由管理员安全恢复" : "可由管理员安全停用",
+                summary: "管理员辅助程序会独立校验配置位置、root 所有权、文件指纹、Label 和 Apple 签名，再管理当前用户的全局 Agent 实例。",
+                diagnosticCommand: launchctlPrintCommand,
+                opensLoginItemSettings: false
+            )
+        case .launchDaemon:
             return StartupItemGuidance(
                 title: "需要管理员权限",
-                summary: "该项目作用于系统或所有用户。建议优先使用所属应用的卸载器，不要直接删除 plist。",
+                summary: "该项目作用于整个系统。当前阶段保持只读，建议优先使用所属应用的卸载器。",
                 diagnosticCommand: launchctlPrintCommand,
                 opensLoginItemSettings: false
             )
