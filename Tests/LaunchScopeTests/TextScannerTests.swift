@@ -14,6 +14,15 @@ final class TextScannerTests: XCTestCase {
         XCTAssertTrue(item.arguments.first?.contains("rsync") == true)
     }
 
+    func testCronParserSupportsRebootAndManagedDisabledLine() throws {
+        let original = "@reboot /usr/local/bin/agent --quiet"
+        let items = CronScanner.parse(ManagedTextLine.disabledLine(from: original))
+        let item = try XCTUnwrap(items.first)
+        XCTAssertEqual(item.scheduleDescription, "@reboot")
+        XCTAssertEqual(item.isEnabled, false)
+        XCTAssertEqual(item.controlMetadata["original"], original)
+    }
+
     func testShellParserIncludesLineNumberAndExplanation() throws {
         let items = ShellConfigScanner.parse("""
         # comment
@@ -22,12 +31,22 @@ final class TextScannerTests: XCTestCase {
         launch-my-agent --quiet
         """, path: "/Users/test/.zprofile")
 
-        XCTAssertEqual(items.count, 1)
-        XCTAssertEqual(items[0].configuration["第 2 行"], "export PATH=/opt/example/bin:$PATH")
-        XCTAssertEqual(items[0].configuration["第 4 行"], "launch-my-agent --quiet")
-        XCTAssertEqual(items[0].label, "shell.zprofile")
-        XCTAssertEqual(items[0].arguments.count, 2)
+        XCTAssertEqual(items.count, 2)
+        XCTAssertEqual(items[0].configuration["行号"], "2")
+        XCTAssertEqual(items[1].controlMetadata["original"], "launch-my-agent --quiet")
+        XCTAssertEqual(items[0].label, "shell.zprofile.2")
+        XCTAssertEqual(items[0].arguments.count, 1)
         XCTAssertFalse(items[0].discoveryNotes.isEmpty)
+    }
+
+    func testComplexShellFileIsReadOnly() throws {
+        let items = ShellConfigScanner.parse("""
+        if test -x /tmp/tool; then
+          /tmp/tool
+        fi
+        """, path: "/Users/test/.zprofile")
+        XCTAssertFalse(items.isEmpty)
+        XCTAssertTrue(items.allSatisfy { $0.configuration["可安全单行修改"] == "否" })
     }
 
     func testBackgroundTaskParserIsTolerant() throws {

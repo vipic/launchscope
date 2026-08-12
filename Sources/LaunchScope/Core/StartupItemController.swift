@@ -5,6 +5,10 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
     case enable
     case stopHomebrew
     case startHomebrew
+    case disableCron
+    case enableCron
+    case disableShellLine
+    case enableShellLine
 
     var title: String {
         switch self {
@@ -12,11 +16,13 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .enable: "恢复启用"
         case .stopHomebrew: "停止服务"
         case .startHomebrew: "启动服务"
+        case .disableCron, .disableShellLine: "安全停用"
+        case .enableCron, .enableShellLine: "恢复启用"
         }
     }
 
     var isDestructive: Bool {
-        self == .disable || self == .stopHomebrew
+        self == .disable || self == .stopHomebrew || self == .disableCron || self == .disableShellLine
     }
 
     var inverse: StartupItemControlAction {
@@ -25,6 +31,10 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .enable: .disable
         case .stopHomebrew: .startHomebrew
         case .startHomebrew: .stopHomebrew
+        case .disableCron: .enableCron
+        case .enableCron: .disableCron
+        case .disableShellLine: .enableShellLine
+        case .enableShellLine: .disableShellLine
         }
     }
 
@@ -34,6 +44,10 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
         case .enable: "恢复启用这个 LaunchAgent？"
         case .stopHomebrew: "停止这个 Homebrew 服务？"
         case .startHomebrew: "启动这个 Homebrew 服务？"
+        case .disableCron: "停用这条 Cron 规则？"
+        case .enableCron: "恢复这条 Cron 规则？"
+        case .disableShellLine: "停用这条 Shell 命令？"
+        case .enableShellLine: "恢复这条 Shell 命令？"
         }
     }
 
@@ -47,6 +61,14 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
             "LaunchScope 会调用 brew services stop，立即停止服务并取消登录时自动启动；以后可以重新启动。"
         case .startHomebrew:
             "LaunchScope 会调用 brew services start，立即启动服务并注册为登录时自动启动。"
+        case .disableCron:
+            "LaunchScope 会重新读取完整 crontab，确认目标行未变化后将该行标记为停用；原文保留在可恢复标记中。"
+        case .enableCron:
+            "LaunchScope 只会恢复由自身标记且内容完全匹配的 Cron 行。"
+        case .disableShellLine:
+            "LaunchScope 会确认文件归当前用户所有且目标行未变化，再原子地注释这一行；不会执行其中的命令。"
+        case .enableShellLine:
+            "LaunchScope 只会恢复由自身标记且内容完全匹配的 Shell 行；文件变化时会拒绝覆盖。"
         }
     }
 }
@@ -77,6 +99,12 @@ struct StartupItemController: Sendable {
         if validatedHomebrewService(for: item) != nil {
             return item.runtime.state == .running ? .stopHomebrew : .startHomebrew
         }
+        if validatedTextLine(for: item, source: .cron) != nil {
+            return item.isEnabled == false ? .enableCron : .disableCron
+        }
+        if validatedShellLine(for: item) != nil {
+            return item.isEnabled == false ? .enableShellLine : .disableShellLine
+        }
         return nil
     }
 
@@ -94,6 +122,10 @@ struct StartupItemController: Sendable {
             return performLaunchAgent(action, on: item)
         case .stopHomebrew, .startHomebrew:
             return performHomebrew(action, on: item)
+        case .disableCron, .enableCron:
+            return performCron(action, on: item)
+        case .disableShellLine, .enableShellLine:
+            return performShellLine(action, on: item)
         }
     }
 
@@ -129,7 +161,7 @@ struct StartupItemController: Sendable {
                 arguments: ["bootstrap", target.domain, sourcePath],
                 timeout: 4
             )
-        case .stopHomebrew, .startHomebrew:
+        case .stopHomebrew, .startHomebrew, .disableCron, .enableCron, .disableShellLine, .enableShellLine:
             return invalidTargetResult()
         }
 
@@ -151,6 +183,90 @@ struct StartupItemController: Sendable {
                 ? "项目已标记为停用，但卸载当前任务失败：\(detail)"
                 : "项目已恢复允许，但重新加载失败：\(detail)"
         )
+    }
+
+    private func performCron(_ action: StartupItemControlAction, on item: StartupItem) -> StartupItemControlResult {
+        guard let target = validatedTextLine(for: item, source: .cron) else { return invalidTargetResult() }
+        let current = runner.run(executable: "/usr/bin/crontab", arguments: ["-l"], timeout: 3)
+        guard current.exitCode == 0 else { return failureResult(action: action, phase: "读取 crontab", command: current) }
+        do {
+            guard ManagedTextLine.fingerprint(current.standardOutput) == target.fingerprint else {
+                throw ManagedTextLineError.lineChanged
+            }
+            let updated = try ManagedTextLine.replacingLine(
+                in: current.standardOutput,
+                lineNumber: target.lineNumber,
+                expectedOriginal: target.original,
+                enable: action == .enableCron
+            )
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("launchscope-crontab-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: url) }
+            try Data(updated.utf8).write(to: url, options: [.atomic])
+            let install = runner.run(executable: "/usr/bin/crontab", arguments: [url.path], timeout: 4)
+            guard install.exitCode == 0 else { return failureResult(action: action, phase: "更新 crontab", command: install) }
+            return successResult(action: action, kind: "Cron 规则")
+        } catch {
+            return textFailure(error)
+        }
+    }
+
+    private func performShellLine(_ action: StartupItemControlAction, on item: StartupItem) -> StartupItemControlResult {
+        guard let target = validatedShellLine(for: item) else { return invalidTargetResult() }
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: target.path)
+            guard attributes[.type] as? FileAttributeType == .typeRegular,
+                  (attributes[.ownerAccountID] as? NSNumber)?.uint32Value == userIdentifier else {
+                throw ManagedTextLineError.unsafeFile
+            }
+            let data = try Data(contentsOf: URL(fileURLWithPath: target.path))
+            guard let current = String(data: data, encoding: .utf8) else { throw ManagedTextLineError.invalidEncoding }
+            guard ManagedTextLine.fingerprint(current) == target.fingerprint else {
+                throw ManagedTextLineError.lineChanged
+            }
+            let updated = try ManagedTextLine.replacingLine(
+                in: current,
+                lineNumber: target.lineNumber,
+                expectedOriginal: target.original,
+                enable: action == .enableShellLine
+            )
+            try Data(updated.utf8).write(to: URL(fileURLWithPath: target.path), options: .atomic)
+            if let permissions = attributes[.posixPermissions] {
+                try FileManager.default.setAttributes([.posixPermissions: permissions], ofItemAtPath: target.path)
+            }
+            return successResult(action: action, kind: "Shell 命令")
+        } catch {
+            return textFailure(error)
+        }
+    }
+
+    private func validatedTextLine(for item: StartupItem, source: StartupSource) -> (lineNumber: Int, original: String, fingerprint: String)? {
+        guard item.source == source, !item.isAppleItem,
+              let value = item.controlMetadata["line"], let lineNumber = Int(value), lineNumber > 0,
+              let original = item.controlMetadata["original"], !original.contains("\n"),
+              let fingerprint = item.controlMetadata["fingerprint"], fingerprint.count == 64 else { return nil }
+        return (lineNumber, original, fingerprint)
+    }
+
+    private func validatedShellLine(for item: StartupItem) -> (path: String, lineNumber: Int, original: String, fingerprint: String)? {
+        guard let line = validatedTextLine(for: item, source: .shellConfiguration), let path = item.sourcePath else { return nil }
+        guard item.configuration["可安全单行修改"] == "是" else { return nil }
+        let allowed = Set(ShellConfigScanner(homeDirectory: homeDirectory).files.map { URL(fileURLWithPath: $0).standardizedFileURL.path })
+        let standardized = URL(fileURLWithPath: path).standardizedFileURL.path
+        guard allowed.contains(standardized) else { return nil }
+        return (standardized, line.lineNumber, line.original, line.fingerprint)
+    }
+
+    private func successResult(action: StartupItemControlAction, kind: String) -> StartupItemControlResult {
+        let enabled = action == .enableCron || action == .enableShellLine
+        return StartupItemControlResult(
+            outcome: .success,
+            title: enabled ? "已恢复启用" : "已安全停用",
+            message: enabled ? "\(kind)已按保留的原文恢复。" : "\(kind)已标记为停用，原文保留，可随时恢复。"
+        )
+    }
+
+    private func textFailure(_ error: Error) -> StartupItemControlResult {
+        StartupItemControlResult(outcome: .failure, title: "安全操作已停止", message: error.localizedDescription)
     }
 
     private func performHomebrew(

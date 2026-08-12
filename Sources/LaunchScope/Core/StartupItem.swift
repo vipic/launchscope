@@ -145,6 +145,7 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
     var isEnabled: Bool?
     var isAppleItem: Bool
     var discoveryNotes: [String]
+    var controlMetadata: [String: String]
 
     init(
         id: String,
@@ -166,7 +167,8 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
         targetExists: Bool? = nil,
         isEnabled: Bool? = nil,
         isAppleItem: Bool = false,
-        discoveryNotes: [String] = []
+        discoveryNotes: [String] = [],
+        controlMetadata: [String: String] = [:]
     ) {
         self.id = id
         self.label = label
@@ -188,6 +190,7 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
         self.isEnabled = isEnabled
         self.isAppleItem = isAppleItem
         self.discoveryNotes = discoveryNotes
+        self.controlMetadata = controlMetadata
     }
 
     var ownerName: String { attribution?.displayName ?? displayName }

@@ -27,39 +27,47 @@ struct ShellConfigScanner: Sendable {
     }
 
     static func parse(_ contents: String, path: String) -> [StartupItem] {
-        let commands = contents.split(separator: "\n", omittingEmptySubsequences: false).enumerated().compactMap { offset, line -> (Int, String)? in
-            let command = line.trimmingCharacters(in: .whitespaces)
-            guard !command.isEmpty, !command.hasPrefix("#") else { return nil }
-            return (offset + 1, command)
-        }
-        guard !commands.isEmpty else { return [] }
-
         let fileName = (path as NSString).lastPathComponent
         let shellIdentifier = fileName.trimmingCharacters(in: CharacterSet(charactersIn: "."))
         let isLoginShellFile = [".zprofile", ".zlogin", ".profile", ".bash_profile"].contains(fileName)
         let executionContext = isLoginShellFile ? "登录 Shell" : "交互式 Shell"
-        var configuration = Dictionary(uniqueKeysWithValues: commands.map {
-            ("第 \($0.0) 行", $0.1)
-        })
-        configuration["执行场景"] = executionContext
-        configuration["有效行数"] = String(commands.count)
+        let activeLines = contents.components(separatedBy: "\n").map {
+            $0.trimmingCharacters(in: .whitespaces)
+        }.filter { !$0.isEmpty && !$0.hasPrefix("#") }
+        let structurallySimple = activeLines.allSatisfy(Self.isSimpleStandaloneCommand)
+        return contents.split(separator: "\n", omittingEmptySubsequences: false).enumerated().compactMap { offset, line in
+            let rawLine = String(line)
+            let restored = ManagedTextLine.originalLine(from: rawLine)
+            let original = restored ?? rawLine
+            let command = original.trimmingCharacters(in: .whitespaces)
+            guard !command.isEmpty, restored != nil || !command.hasPrefix("#") else { return nil }
+            let lineNumber = offset + 1
+            return StartupItem(
+                id: "shell:\(path):\(lineNumber):\(command)",
+                label: "shell.\(shellIdentifier).\(lineNumber)",
+                displayName: command,
+                source: .shellConfiguration,
+                sourcePath: path,
+                arguments: [command],
+                scheduleDescription: executionContext,
+                configuration: [
+                    "配置文件": fileName, "行号": String(lineNumber), "原始行": original,
+                    "执行场景": executionContext, "可安全单行修改": structurallySimple ? "是" : "否",
+                ],
+                isEnabled: restored == nil,
+                isAppleItem: false,
+                discoveryNotes: [isLoginShellFile
+                    ? "该命令会在登录 Shell 启动时读取，但不一定在 macOS 图形界面登录时执行"
+                    : "该命令通常在打开交互式终端时读取，不属于严格意义上的系统登录启动项"],
+                controlMetadata: ["line": String(lineNumber), "original": original, "fingerprint": ManagedTextLine.fingerprint(contents)]
+            )
+        }
+    }
 
-        return [StartupItem(
-            id: "shell:\(path)",
-            label: "shell.\(shellIdentifier)",
-            displayName: fileName,
-            source: .shellConfiguration,
-            sourcePath: path,
-            arguments: commands.map(\.1),
-            scheduleDescription: executionContext,
-            configuration: configuration,
-            isEnabled: true,
-            isAppleItem: false,
-            discoveryNotes: [
-                isLoginShellFile
-                    ? "该文件会在登录 Shell 启动时读取，但不一定在 macOS 图形界面登录时执行"
-                    : "该文件通常在打开交互式终端时读取，不属于严格意义上的系统登录启动项",
-            ]
-        )]
+    private static func isSimpleStandaloneCommand(_ line: String) -> Bool {
+        if line.hasSuffix("\\") || line.contains("<<") { return false }
+        let first = line.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? ""
+        let structural = ["if", "then", "else", "elif", "fi", "for", "while", "until", "do", "done", "case", "esac", "function", "{", "}"]
+        return !structural.contains(first) && !line.hasSuffix("{")
     }
 }

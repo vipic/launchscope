@@ -50,15 +50,17 @@ extension StartupItem {
             )
         case .cron:
             return StartupItemGuidance(
-                title: "先备份完整 crontab",
-                summary: "Cron 项目共享同一份用户 crontab。修改前应整体备份，并按原始行精确处理。",
+                title: isEnabled == false ? "可安全恢复" : "可安全停用",
+                summary: "LaunchScope 会重新读取完整 crontab，确认目标行未变化后仅标记这一行；原文保留在可恢复标记中。",
                 diagnosticCommand: "/usr/bin/crontab -l",
                 opensLoginItemSettings: false
             )
         case .shellConfiguration:
             return StartupItemGuidance(
-                title: "谨慎编辑 Shell 配置",
-                summary: "建议先备份文件，再注释对应命令并打开新终端验证；不要直接删除整份配置。",
+                title: configuration["可安全单行修改"] == "是" ? (isEnabled == false ? "可安全恢复" : "可安全停用") : "复杂 Shell 配置保持只读",
+                summary: configuration["可安全单行修改"] == "是"
+                    ? "LaunchScope 只修改这一行，并要求文件归当前用户所有、路径受允许且内容与扫描时完全一致。"
+                    : "文件包含多行结构、续行或 heredoc，无法证明单行修改安全，因此不提供操作入口。",
                 diagnosticCommand: sourcePath.map { "/usr/bin/sed -n '1,160p' \(Self.shellQuote($0))" },
                 opensLoginItemSettings: false
             )

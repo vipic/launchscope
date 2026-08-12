@@ -17,12 +17,22 @@ struct CronScanner: Sendable {
 
     static func parse(_ text: String) -> [StartupItem] {
         text.split(separator: "\n", omittingEmptySubsequences: false).enumerated().compactMap { offset, line in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty, !trimmed.hasPrefix("#") else { return nil }
+            let rawLine = String(line)
+            let restored = ManagedTextLine.originalLine(from: rawLine)
+            let candidate = restored ?? rawLine
+            let trimmed = candidate.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty, restored != nil || !trimmed.hasPrefix("#") else { return nil }
             let parts = trimmed.split(maxSplits: 5, whereSeparator: \.isWhitespace).map(String.init)
-            guard parts.count >= 6 else { return nil }
-            let schedule = parts.prefix(5).joined(separator: " ")
-            let command = parts[5]
+            let schedule: String
+            let command: String
+            if parts.first?.hasPrefix("@") == true, parts.count >= 2 {
+                schedule = parts[0]
+                command = parts.dropFirst().joined(separator: " ")
+            } else {
+                guard parts.count >= 6 else { return nil }
+                schedule = parts.prefix(5).joined(separator: " ")
+                command = parts[5]
+            }
             return StartupItem(
                 id: "cron:\(offset):\(trimmed)",
                 label: "cron.\(offset + 1)",
@@ -32,10 +42,11 @@ struct CronScanner: Sendable {
                 executablePath: Self.commandExecutable(command),
                 arguments: [command],
                 scheduleDescription: schedule,
-                configuration: ["表达式": schedule, "命令": command],
+                configuration: ["表达式": schedule, "命令": command, "行号": String(offset + 1)],
                 targetExists: PathAccessPolicy.targetExistsWithoutPrompt(at: Self.commandExecutable(command)),
-                isEnabled: true,
-                isAppleItem: false
+                isEnabled: restored == nil,
+                isAppleItem: false,
+                controlMetadata: ["line": String(offset + 1), "original": candidate, "fingerprint": ManagedTextLine.fingerprint(text)]
             )
         }
     }

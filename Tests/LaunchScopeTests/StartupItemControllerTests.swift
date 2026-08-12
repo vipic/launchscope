@@ -111,6 +111,62 @@ final class StartupItemControllerTests: XCTestCase {
         XCTAssertTrue(result.message.contains("formula not installed"))
     }
 
+    func testCronDisableRequiresExactCurrentLineAndUsesCrontabCommand() {
+        let runner = RecordingCommandRunner(results: [
+            CommandResult(standardOutput: "@reboot /usr/local/bin/agent\n", standardError: "", exitCode: 0, timedOut: false),
+            .success(),
+        ])
+        let controller = makeController(runner: runner)
+        let item = CronScanner.parse("@reboot /usr/local/bin/agent\n")[0]
+
+        XCTAssertEqual(controller.availableAction(for: item), .disableCron)
+        XCTAssertEqual(controller.perform(.disableCron, on: item).outcome, .success)
+        XCTAssertEqual(runner.calls.map(\.executable), ["/usr/bin/crontab", "/usr/bin/crontab"])
+        XCTAssertEqual(runner.calls[0].arguments, ["-l"])
+    }
+
+    func testShellLineCanBeDisabledAndRestoredWithoutChangingOtherLines() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let path = directory.appendingPathComponent(".zprofile")
+        let original = "export PATH=/opt/bin:$PATH\nagent --start\n"
+        try original.write(to: path, atomically: true, encoding: .utf8)
+        let controller = StartupItemController(
+            runner: RecordingCommandRunner(results: []),
+            homeDirectory: directory.path,
+            userIdentifier: getuid()
+        )
+        let item = ShellConfigScanner.parse(original, path: path.path)[1]
+
+        XCTAssertEqual(controller.availableAction(for: item), .disableShellLine)
+        XCTAssertEqual(controller.perform(.disableShellLine, on: item).outcome, .success)
+        let disabledText = try String(contentsOf: path, encoding: .utf8)
+        let disabledItem = try XCTUnwrap(ShellConfigScanner.parse(disabledText, path: path.path).first { $0.label == item.label })
+        XCTAssertEqual(disabledItem.isEnabled, false)
+        XCTAssertEqual(controller.perform(.enableShellLine, on: disabledItem).outcome, .success)
+        XCTAssertEqual(try String(contentsOf: path, encoding: .utf8), original)
+    }
+
+    func testShellLineRefusesToOverwriteFileChangedAfterScan() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let path = directory.appendingPathComponent(".zprofile")
+        let original = "agent --start\n"
+        try original.write(to: path, atomically: true, encoding: .utf8)
+        let item = ShellConfigScanner.parse(original, path: path.path)[0]
+        try "export NEW=1\nagent --start\n".write(to: path, atomically: true, encoding: .utf8)
+        let controller = StartupItemController(
+            runner: RecordingCommandRunner(results: []),
+            homeDirectory: directory.path,
+            userIdentifier: getuid()
+        )
+
+        let result = controller.perform(.disableShellLine, on: item)
+        XCTAssertEqual(result.outcome, .failure)
+        XCTAssertTrue(result.message.contains("变化"))
+        XCTAssertEqual(try String(contentsOf: path, encoding: .utf8), "export NEW=1\nagent --start\n")
+    }
+
     private func makeController(
         results: [CommandResult],
         homebrewExecutable: String? = nil
