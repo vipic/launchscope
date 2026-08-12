@@ -6,6 +6,7 @@ struct StartupItemDetailView: View {
     var item: StartupItem?
     var showSensitiveValues: Bool
     @State private var pendingControlAction: StartupItemControlAction?
+    @State private var showAnnotationEditor = false
 
     var body: some View {
         Group {
@@ -15,6 +16,7 @@ struct StartupItemDetailView: View {
                         header(item)
                         identitySection(item)
                         runtimeSection(item)
+                        annotationSection(item)
                         actionSection(item)
                         launchSection(item)
                         signatureSection(item)
@@ -47,6 +49,36 @@ struct StartupItemDetailView: View {
             }
         } message: {
             Text(confirmationMessage)
+        }
+        .sheet(isPresented: $showAnnotationEditor) {
+            if let item {
+                ItemAnnotationEditorView(item: item, annotation: store.annotation(for: item)) { note, tags, trusted in
+                    store.saveAnnotation(for: item, note: note, tags: tags, isTrusted: trusted)
+                }
+            }
+        }
+    }
+
+    private func annotationSection(_ item: StartupItem) -> some View {
+        let annotation = store.annotation(for: item)
+        return DetailSection(title: "用户标记", systemImage: "tag") {
+            HStack {
+                Label(
+                    annotation?.isTrusted == true ? "已加入信任名单" : "未信任",
+                    systemImage: annotation?.isTrusted == true ? "checkmark.shield.fill" : "shield.lefthalf.filled"
+                )
+                Spacer()
+                Button("编辑") { showAnnotationEditor = true }.buttonStyle(.bordered)
+            }
+            if let tags = annotation?.tags, !tags.isEmpty {
+                DetailRow(label: "标签", value: tags.joined(separator: "、"))
+            }
+            if let note = annotation?.note, !note.isEmpty {
+                DetailRow(label: "备注", value: note)
+            }
+            if let error = store.annotationPersistenceError {
+                Text(error).font(.caption).foregroundStyle(.red)
+            }
         }
     }
 

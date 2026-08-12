@@ -6,8 +6,10 @@ struct DashboardView: View {
     @AppStorage(PreferenceKeys.hideAppleItems) private var hideAppleItems = true
     @AppStorage(PreferenceKeys.showSensitiveValues) private var showSensitiveValues = false
     @AppStorage(PreferenceKeys.groupByOwner) private var groupByOwner = true
+    @AppStorage(PreferenceKeys.hideTrustedItems) private var hideTrustedItems = false
     @State private var showControlHistory = false
     @State private var showScanChanges = false
+    @State private var showAuditExport = false
 
     var body: some View {
         NavigationSplitView {
@@ -18,7 +20,7 @@ struct DashboardView: View {
             } else {
                 StartupItemListView(
                     store: store,
-                    items: store.filteredItems(hideAppleItems: hideAppleItems),
+                    items: visibleItems,
                     groupByOwner: groupByOwner
                 )
             }
@@ -45,10 +47,24 @@ struct DashboardView: View {
                     Label("操作历史", systemImage: "clock.arrow.circlepath")
                 }
 
+                Button {
+                    showAuditExport = true
+                } label: {
+                    Label("导出审计报告", systemImage: "square.and.arrow.up")
+                }
+
                 Menu {
                     Toggle("按所属应用归组", isOn: $groupByOwner)
                     Toggle("隐藏 Apple 项目", isOn: $hideAppleItems)
+                    Toggle("隐藏已信任项目", isOn: $hideTrustedItems)
                     Toggle("显示敏感配置值", isOn: $showSensitiveValues)
+                    Toggle("新增未信任项目提醒", isOn: Binding(
+                        get: { store.notificationsEnabled },
+                        set: { store.setNotificationsEnabled($0) }
+                    ))
+                    if let error = store.notificationError {
+                        Text(error).foregroundStyle(.secondary)
+                    }
                     Divider()
                     Button("打开系统登录项设置") {
                         SMAppService.openSystemSettingsLoginItems()
@@ -89,6 +105,16 @@ struct DashboardView: View {
         .sheet(isPresented: $showScanChanges) {
             ScanChangesView(store: store)
         }
+        .sheet(isPresented: $showAuditExport) {
+            AuditExportView(
+                allItems: store.items,
+                visibleItems: visibleItems,
+                annotations: store.annotations,
+                issues: store.issues,
+                changes: store.scanChanges,
+                scannedAt: store.scannedAt
+            )
+        }
         .alert(item: $store.controlResult) { result in
             Alert(
                 title: Text(result.title),
@@ -97,5 +123,9 @@ struct DashboardView: View {
             )
         }
         .frame(minWidth: 1050, minHeight: 660)
+    }
+
+    private var visibleItems: [StartupItem] {
+        store.filteredItems(hideAppleItems: hideAppleItems, hideTrustedItems: hideTrustedItems)
     }
 }

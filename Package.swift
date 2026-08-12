@@ -14,7 +14,7 @@ let package = Package(
             name: "LaunchScope",
             path: "Sources/LaunchScope",
             resources: [.process("Resources")],
-            linkerSettings: [.linkedFramework("Security")]
+            linkerSettings: [.linkedFramework("Security"), .linkedFramework("UserNotifications")]
         ),
         .testTarget(
             name: "LaunchScopeTests",

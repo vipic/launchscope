@@ -4,7 +4,7 @@ struct SidebarView: View {
     @ObservedObject var store: DashboardStore
 
     private let overviewFilters: [DashboardFilter] = [
-        .all, .thirdParty, .apple, .running, .missingTarget, .disabled, .issues,
+        .all, .thirdParty, .untrusted, .apple, .running, .missingTarget, .disabled, .issues,
     ]
 
     var body: some View {

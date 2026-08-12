@@ -3,6 +3,8 @@ import SwiftUI
 struct StartupItemRow: View {
     var item: StartupItem
     var isSelected: Bool
+    var isTrusted: Bool
+    var isNew: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: UIConstants.regularSpacing) {
@@ -27,6 +29,11 @@ struct StartupItemRow: View {
                     .textSelection(.enabled)
 
                 HStack(spacing: 6) {
+                    if isNew && !isTrusted {
+                        StatusBadge(title: "新增未信任", systemImage: "sparkles", color: LaunchScopePalette.warning)
+                    } else if isTrusted {
+                        StatusBadge(title: "已信任", systemImage: "checkmark.shield", color: LaunchScopePalette.healthy)
+                    }
                     StatusBadge(title: item.source.compactTitle, systemImage: item.source.systemImage)
                     runtimeBadge
                     signatureBadge

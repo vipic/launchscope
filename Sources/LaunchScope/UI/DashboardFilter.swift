@@ -7,6 +7,7 @@ enum DashboardFilter: Hashable, Identifiable {
     case running
     case missingTarget
     case disabled
+    case untrusted
     case issues
     case source(StartupSource)
 
@@ -18,6 +19,7 @@ enum DashboardFilter: Hashable, Identifiable {
         case .running: "running"
         case .missingTarget: "missingTarget"
         case .disabled: "disabled"
+        case .untrusted: "untrusted"
         case .issues: "issues"
         case .source(let source): "source.\(source.rawValue)"
         }
@@ -31,6 +33,7 @@ enum DashboardFilter: Hashable, Identifiable {
         case .running: "正在运行"
         case .missingTarget: "目标已缺失"
         case .disabled: "已停用"
+        case .untrusted: "未信任项目"
         case .issues: "扫描提示"
         case .source(let source): source.title
         }
@@ -44,6 +47,7 @@ enum DashboardFilter: Hashable, Identifiable {
         case .running: "play.circle"
         case .missingTarget: "exclamationmark.triangle"
         case .disabled: "pause.circle"
+        case .untrusted: "shield.lefthalf.filled"
         case .issues: "bell.badge"
         case .source(let source): source.systemImage
         }

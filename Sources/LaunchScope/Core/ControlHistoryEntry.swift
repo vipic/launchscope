@@ -56,7 +56,7 @@ struct ControlHistoryEntry: Identifiable, Codable, Equatable, Sendable {
 
 extension StartupItem {
     var controlHistoryKey: String {
-        "\(source.rawValue):\(label)"
+        privacySafeKey
     }
 }
 

@@ -59,7 +59,12 @@ struct StartupItemListView: View {
         Button {
             store.selectedItemID = item.id
         } label: {
-            StartupItemRow(item: item, isSelected: store.selectedItemID == item.id)
+            StartupItemRow(
+                item: item,
+                isSelected: store.selectedItemID == item.id,
+                isTrusted: store.isTrusted(item),
+                isNew: store.isNew(item)
+            )
         }
         .buttonStyle(.plain)
         .listRowSeparator(.hidden)

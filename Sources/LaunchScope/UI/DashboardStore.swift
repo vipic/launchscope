@@ -4,7 +4,11 @@ import Foundation
 final class DashboardStore: ObservableObject {
     private let historyPersistence: any ControlHistoryPersisting
     private let snapshotPersistence: any ScanSnapshotPersisting
+    private let annotationPersistence: any ItemAnnotationPersisting
+    private let notificationLedgerPersistence: any NotificationLedgerPersisting
+    private let notifier: any NewItemNotifying
     private var previousSnapshot: ScanSnapshot?
+    private var notificationLedger = NotificationLedger()
     @Published private(set) var items: [StartupItem] = []
     @Published private(set) var issues: [ScanIssue] = []
     @Published private(set) var isScanning = false
@@ -19,16 +23,27 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var scanChanges: [ScanChange] = []
     @Published private(set) var comparisonScannedAt: Date?
     @Published private(set) var snapshotPersistenceError: String?
+    @Published private(set) var annotations: [String: ItemAnnotation] = [:]
+    @Published private(set) var annotationPersistenceError: String?
+    @Published private(set) var notificationsEnabled: Bool
+    @Published private(set) var notificationError: String?
     @Published var selectedItemID: String?
     @Published var selectedFilter: DashboardFilter = .thirdParty
     @Published var searchText = ""
 
     init(
         historyPersistence: any ControlHistoryPersisting = ControlHistoryPersistence(),
-        snapshotPersistence: any ScanSnapshotPersisting = ScanSnapshotPersistence()
+        snapshotPersistence: any ScanSnapshotPersisting = ScanSnapshotPersistence(),
+        annotationPersistence: any ItemAnnotationPersisting = ItemAnnotationPersistence(),
+        notificationLedgerPersistence: any NotificationLedgerPersisting = NotificationLedgerPersistence(),
+        notifier: (any NewItemNotifying)? = nil
     ) {
         self.historyPersistence = historyPersistence
         self.snapshotPersistence = snapshotPersistence
+        self.annotationPersistence = annotationPersistence
+        self.notificationLedgerPersistence = notificationLedgerPersistence
+        self.notifier = notifier ?? NewItemNotificationService()
+        notificationsEnabled = UserDefaults.standard.bool(forKey: PreferenceKeys.notifyNewUntrustedItems)
         do {
             controlHistory = Array(try historyPersistence.load().prefix(100))
         } catch {
@@ -38,6 +53,18 @@ final class DashboardStore: ObservableObject {
             previousSnapshot = try snapshotPersistence.load()
         } catch {
             snapshotPersistenceError = "无法读取上次扫描快照：\(error.localizedDescription)"
+        }
+        do {
+            for annotation in try annotationPersistence.load() {
+                annotations[annotation.itemKey] = annotation
+            }
+        } catch {
+            annotationPersistenceError = "无法读取备注与信任名单：\(error.localizedDescription)"
+        }
+        do {
+            notificationLedger = try notificationLedgerPersistence.load()
+        } catch {
+            notificationError = "无法读取提醒去重记录：\(error.localizedDescription)"
         }
     }
 
@@ -172,13 +199,14 @@ final class DashboardStore: ObservableObject {
         backgroundTasksUpdatedAt = report.backgroundTasksUpdatedAt
         isScanning = false
         isRefreshingBackgroundTasks = false
+        scheduleNewItemNotificationIfNeeded()
 
-        let visibleIDs = Set(filteredItems(hideAppleItems: false).map(\.id))
+        let visibleIDs = Set(filteredItems(hideAppleItems: false, hideTrustedItems: false).map(\.id))
         if let selectedItemID, !visibleIDs.contains(selectedItemID) {
             self.selectedItemID = nil
         }
         if self.selectedItemID == nil {
-            self.selectedItemID = filteredItems(hideAppleItems: false).first?.id
+            self.selectedItemID = filteredItems(hideAppleItems: false, hideTrustedItems: false).first?.id
         }
     }
 
@@ -201,10 +229,11 @@ final class DashboardStore: ObservableObject {
         }
     }
 
-    func filteredItems(hideAppleItems: Bool) -> [StartupItem] {
+    func filteredItems(hideAppleItems: Bool, hideTrustedItems: Bool) -> [StartupItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return items.filter { item in
             if hideAppleItems, item.isAppleItem { return false }
+            if hideTrustedItems, isTrusted(item) { return false }
             let filterMatches: Bool
             switch selectedFilter {
             case .all: filterMatches = true
@@ -213,6 +242,7 @@ final class DashboardStore: ObservableObject {
             case .running: filterMatches = item.runtime.state == .running
             case .missingTarget: filterMatches = item.targetExists == false
             case .disabled: filterMatches = item.isEnabled == false || item.runtime.state == .disabled
+            case .untrusted: filterMatches = !item.isAppleItem && !isTrusted(item)
             case .issues: filterMatches = false
             case .source(let source): filterMatches = item.source == source
             }
@@ -228,6 +258,7 @@ final class DashboardStore: ObservableObject {
         case .running: items.count { $0.runtime.state == .running }
         case .missingTarget: items.count { $0.targetExists == false }
         case .disabled: items.count { $0.isEnabled == false || $0.runtime.state == .disabled }
+        case .untrusted: items.count { !$0.isAppleItem && !isTrusted($0) }
         case .issues: issues.count
         case .source(let source): items.count { $0.source == source }
         }
@@ -236,5 +267,75 @@ final class DashboardStore: ObservableObject {
     var selectedItem: StartupItem? {
         guard let selectedItemID else { return nil }
         return items.first { $0.id == selectedItemID }
+    }
+
+    func annotation(for item: StartupItem) -> ItemAnnotation? { annotations[item.privacySafeKey] }
+
+    func isTrusted(_ item: StartupItem) -> Bool { annotation(for: item)?.isTrusted == true }
+
+    func isNew(_ item: StartupItem) -> Bool {
+        let key = ScanSnapshotItem(item: item).key
+        return scanChanges.contains { $0.kind == .added && $0.after?.key == key }
+    }
+
+    func saveAnnotation(for item: StartupItem, note: String, tags: [String], isTrusted: Bool) {
+        let cleanNote = String(note.trimmingCharacters(in: .whitespacesAndNewlines).prefix(2_000))
+        let cleanTags = Array(Set(tags.map {
+            String($0.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
+        }.filter { !$0.isEmpty })).sorted().prefix(20)
+        let key = item.privacySafeKey
+        if cleanNote.isEmpty && cleanTags.isEmpty && !isTrusted {
+            annotations.removeValue(forKey: key)
+        } else {
+            annotations[key] = ItemAnnotation(
+                itemKey: key, note: cleanNote, tags: Array(cleanTags), isTrusted: isTrusted, updatedAt: Date()
+            )
+        }
+        do {
+            try annotationPersistence.save(annotations.values.sorted { $0.itemKey < $1.itemKey })
+            annotationPersistenceError = nil
+        } catch {
+            annotationPersistenceError = "无法保存备注与信任名单：\(error.localizedDescription)"
+        }
+    }
+
+    func setNotificationsEnabled(_ enabled: Bool) {
+        if !enabled {
+            notificationsEnabled = false
+            UserDefaults.standard.set(false, forKey: PreferenceKeys.notifyNewUntrustedItems)
+            return
+        }
+        Task {
+            do {
+                let granted = try await notifier.requestAuthorization()
+                notificationsEnabled = granted
+                UserDefaults.standard.set(granted, forKey: PreferenceKeys.notifyNewUntrustedItems)
+                notificationError = granted ? nil : "系统未授予通知权限，新增项目提醒未开启。"
+            } catch {
+                notificationsEnabled = false
+                notificationError = "无法开启通知：\(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func scheduleNewItemNotificationIfNeeded() {
+        guard notificationsEnabled else { return }
+        let eligible = scanChanges.compactMap { change -> (String, ScanSnapshotItem)? in
+            guard change.kind == .added, let item = change.after, !item.isAppleItem else { return nil }
+            let trusted = items.first { ScanSnapshotItem(item: $0).key == item.key }.map(isTrusted) ?? false
+            return trusted ? nil : (change.id, item)
+        }
+        let activeIDs = Set(eligible.map(\.0))
+        let newItems = eligible.filter { !notificationLedger.activeChangeIDs.contains($0.0) }.map(\.1)
+        Task {
+            do {
+                if !newItems.isEmpty { try await notifier.notify(newItems: newItems) }
+                notificationLedger.activeChangeIDs = activeIDs
+                try notificationLedgerPersistence.save(notificationLedger)
+                notificationError = nil
+            } catch {
+                notificationError = "新增项目提醒失败：\(error.localizedDescription)"
+            }
+        }
     }
 }
