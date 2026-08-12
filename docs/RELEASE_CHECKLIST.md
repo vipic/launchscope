@@ -33,6 +33,22 @@ mise run release -- 0.1.0
 - 发布命令会从 DMG 复制并首次启动正式 bundle，通过精确进程与 WindowServer 清单确认可见主窗口、Dock `regular` 激活策略和非空图标。
 - 关键导航和控制级辅助功能自动化由 `mise run test:ui` 与 `mise run acceptance:release` 验证；正式制品验收不依赖非前台进程下不稳定的 AX 窗口桥接。
 
+### DMG 背景生成提示词
+
+背景使用 Codex 内置 ImageGen 生成，最终项目资源为 `Resources/dmg-background.png`，并转换为发布脚本使用的 660×400 TIFF。重建时使用以下提示词：
+
+```text
+Use case: ads-marketing
+Asset type: macOS DMG installer background for LaunchScope
+Primary request: Create a clean, restrained installer background for a native macOS startup-item auditing utility. Guide the user to drag the app from the left into Applications on the right.
+Scene/backdrop: warm off-white surface with a subtle technical grid and sparse dots.
+Style/medium: polished flat native-macOS utility aesthetic with very soft depth.
+Composition/framing: landscape 660×400; two equal rounded-square recessed wells for the app on the left and Applications on the right; a thin muted blue-gray arrow centered between them. Leave both wells empty for Finder icons.
+Color palette: warm white, slate blue-gray, and restrained amber accents.
+Brand motif: a very faint abstract mole-and-wrench watermark near the lower center, subtle enough not to compete with the installer icons.
+Constraints: no text, no labels, no app icons, no folder icons, no logos, no screenshots, no watermark signature. Do not place any object inside the two icon wells.
+```
+
 ## 发布
 
 ```bash
