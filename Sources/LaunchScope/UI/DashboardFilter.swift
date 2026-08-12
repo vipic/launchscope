@@ -9,6 +9,7 @@ enum DashboardFilter: Hashable, Identifiable {
     case disabled
     case untrusted
     case highRisk
+    case findings
     case issues
     case source(StartupSource)
 
@@ -22,6 +23,7 @@ enum DashboardFilter: Hashable, Identifiable {
         case .disabled: "disabled"
         case .untrusted: "untrusted"
         case .highRisk: "highRisk"
+        case .findings: "findings"
         case .issues: "issues"
         case .source(let source): "source.\(source.rawValue)"
         }
@@ -37,6 +39,7 @@ enum DashboardFilter: Hashable, Identifiable {
         case .disabled: "已停用"
         case .untrusted: "未信任项目"
         case .highRisk: "高风险"
+        case .findings: "冲突与残留"
         case .issues: "扫描提示"
         case .source(let source): source.title
         }
@@ -52,6 +55,7 @@ enum DashboardFilter: Hashable, Identifiable {
         case .disabled: "pause.circle"
         case .untrusted: "shield.lefthalf.filled"
         case .highRisk: "exclamationmark.triangle.fill"
+        case .findings: "arrow.triangle.branch"
         case .issues: "bell.badge"
         case .source(let source): source.systemImage
         }

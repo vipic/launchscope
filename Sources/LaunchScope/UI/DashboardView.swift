@@ -20,6 +20,8 @@ struct DashboardView: View {
         } content: {
             if store.selectedFilter == .issues {
                 IssuesView(issues: store.issues)
+            } else if store.selectedFilter == .findings {
+                StartupFindingsView(store: store)
             } else {
                 StartupItemListView(
                     store: store,

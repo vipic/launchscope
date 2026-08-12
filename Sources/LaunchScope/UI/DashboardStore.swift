@@ -11,6 +11,7 @@ final class DashboardStore: ObservableObject {
     private var notificationLedger = NotificationLedger()
     @Published private(set) var items: [StartupItem] = []
     @Published private(set) var issues: [ScanIssue] = []
+    @Published private(set) var findings: [StartupFinding] = []
     @Published private(set) var isScanning = false
     @Published private(set) var scannedAt: Date?
     @Published private(set) var scanDuration: TimeInterval?
@@ -220,6 +221,7 @@ final class DashboardStore: ObservableObject {
         updateSnapshot(with: report)
         items = report.items
         issues = report.issues
+        findings = StartupConflictDetector.detect(report.items)
         scannedAt = report.scannedAt
         scanDuration = report.duration
         backgroundTasksUpdatedAt = report.backgroundTasksUpdatedAt
@@ -270,6 +272,7 @@ final class DashboardStore: ObservableObject {
             case .disabled: filterMatches = item.isEnabled == false || item.runtime.state == .disabled
             case .untrusted: filterMatches = !item.isAppleItem && !isTrusted(item)
             case .highRisk: filterMatches = riskAssessment(for: item).level == .high
+            case .findings: filterMatches = false
             case .issues: filterMatches = false
             case .source(let source): filterMatches = item.source == source
             }
@@ -287,6 +290,7 @@ final class DashboardStore: ObservableObject {
         case .disabled: items.count { $0.isEnabled == false || $0.runtime.state == .disabled }
         case .untrusted: items.count { !$0.isAppleItem && !isTrusted($0) }
         case .highRisk: items.count { riskAssessment(for: $0).level == .high }
+        case .findings: findings.count
         case .issues: issues.count
         case .source(let source): items.count { $0.source == source }
         }

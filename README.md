@@ -34,6 +34,7 @@ LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd�
 - 通过窄权限辅助接口安全停用或恢复当前用户的全局 LaunchAgent 实例
 - 通过相同的独立校验安全停用或恢复系统级非 Apple LaunchDaemon
 - 以低风险、需关注和高风险呈现可解释评级，并逐条列出签名、权限、持久化与残留依据
+- 检测目标缺失残留、重复 Label/执行目标、Homebrew 与 launchd 重叠及重复 Shell 命令
 
 ## 开发
 
