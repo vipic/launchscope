@@ -13,6 +13,8 @@ identity="${CODESIGN_IDENTITY:-Nekutai}"
 staging="$project_dir/.release_staging"
 app_dir="$staging/LaunchScope.app"
 contents="$app_dir/Contents"
+launch_services="$contents/Library/LaunchServices"
+launch_daemons="$contents/Library/LaunchDaemons"
 dist="$project_dir/dist"
 
 if [[ "$identity" == "-" ]] || ! security find-identity -v -p codesigning | grep -Fq "\"$identity\""; then
@@ -29,12 +31,15 @@ if git rev-parse "$version" >/dev/null 2>&1; then
 fi
 
 rm -rf "$staging"
-mkdir -p "$contents/MacOS" "$contents/Resources" "$dist"
+mkdir -p "$contents/MacOS" "$contents/Resources" "$launch_services" "$launch_daemons" "$dist"
 cp ".build/release/LaunchScope" "$contents/MacOS/LaunchScope"
+cp ".build/release/LaunchScopePrivilegedHelper" "$launch_services/LaunchScopePrivilegedHelper"
+cp "scripts/com.nekutai.launchscope.helper.plist" "$launch_daemons/com.nekutai.launchscope.helper.plist"
 cp "Sources/LaunchScope/Resources/AppIcon.icns" "$contents/Resources/AppIcon.icns"
 cp "scripts/Info.plist.template" "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $version" "$contents/Info.plist"
+codesign --force --sign "$identity" --identifier com.nekutai.launchscope.helper "$launch_services/LaunchScopePrivilegedHelper"
 codesign --force --deep --sign "$identity" "$app_dir"
 scripts/verify_release.sh "$app_dir" "$version"
 

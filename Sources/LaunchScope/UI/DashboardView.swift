@@ -11,6 +11,8 @@ struct DashboardView: View {
     @State private var showScanChanges = false
     @State private var showAuditExport = false
     @State private var showRecoveryCenter = false
+    @State private var showPrivilegedHelper = false
+    @StateObject private var privilegedHelper = PrivilegedHelperManager()
 
     var body: some View {
         NavigationSplitView {
@@ -73,6 +75,7 @@ struct DashboardView: View {
                         Text(error).foregroundStyle(.secondary)
                     }
                     Divider()
+                    Button("管理员辅助程序…") { showPrivilegedHelper = true }
                     Button("打开系统登录项设置") {
                         SMAppService.openSystemSettingsLoginItems()
                     }
@@ -136,6 +139,9 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showRecoveryCenter) {
             RecoveryCenterView(store: store)
+        }
+        .sheet(isPresented: $showPrivilegedHelper) {
+            PrivilegedHelperView(manager: privilegedHelper)
         }
         .alert(item: $store.controlResult) { result in
             Alert(

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.nekutai.launchscope.helper</string>
+  <key>BundleProgram</key>
+  <string>Contents/Library/LaunchServices/LaunchScopePrivilegedHelper</string>
+  <key>MachServices</key>
+  <dict>
+    <key>com.nekutai.launchscope.helper</key>
+    <true/>
+  </dict>
+  <key>AssociatedBundleIdentifiers</key>
+  <array>
+    <string>com.nekutai.launchscope</string>
+    <string>com.nekutai.launchscope.dev</string>
+  </array>
+  <key>UserName</key>
+  <string>root</string>
+</dict>
+</plist>
