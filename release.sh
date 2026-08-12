@@ -16,13 +16,34 @@ contents="$app_dir/Contents"
 launch_services="$contents/Library/LaunchServices"
 launch_daemons="$contents/Library/LaunchDaemons"
 dist="$project_dir/dist"
+branch=""
+repository=""
+
+cd "$project_dir"
+
+if [[ "$publish" == "--publish" ]]; then
+  command -v gh >/dev/null || { echo "缺少 gh CLI" >&2; exit 1; }
+  git remote get-url origin >/dev/null 2>&1 || { echo "缺少 Git 远端 origin，停止发布。" >&2; exit 1; }
+  branch="$(git branch --show-current)"
+  [[ -n "$branch" ]] || { echo "当前处于 detached HEAD，停止发布。" >&2; exit 1; }
+  gh auth status >/dev/null
+  repository="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
+  git ls-remote origin >/dev/null
+  if git ls-remote --tags origin "refs/tags/$version" | grep -q .; then
+    echo "远端版本标签已存在：$version" >&2
+    exit 1
+  fi
+  if gh release view "$version" --repo "$repository" >/dev/null 2>&1; then
+    echo "GitHub Release 已存在：$version" >&2
+    exit 1
+  fi
+fi
 
 if [[ "$identity" == "-" ]] || ! security find-identity -v -p codesigning | grep -Fq "\"$identity\""; then
   echo "找不到稳定代码签名身份：$identity；不会回退为 ad-hoc。" >&2
   exit 1
 fi
 
-cd "$project_dir"
 mise run check
 test -z "$(git status --porcelain)" || { echo "工作区存在未提交改动，停止发布。" >&2; exit 1; }
 if git rev-parse "$version" >/dev/null 2>&1; then
@@ -53,8 +74,17 @@ echo "发布产物：$dmg"
 echo "校验文件：$dmg.sha256"
 
 if [[ "$publish" == "--publish" ]]; then
-  command -v gh >/dev/null || { echo "缺少 gh CLI" >&2; exit 1; }
-  git tag "$version"
-  git push origin "$version"
-  gh release create "$version" "$dmg" "$dmg.sha256" --generate-notes --title "LaunchScope $version"
+  git tag -a "$version" -m "LaunchScope $version"
+  if ! git push --atomic origin "HEAD:refs/heads/$branch" "refs/tags/$version"; then
+    git tag -d "$version" >/dev/null
+    echo "源码分支与版本标签推送失败，本地标签已回滚。" >&2
+    exit 1
+  fi
+  if ! gh release create "$version" "$dmg" "$dmg.sha256" \
+      --repo "$repository" --generate-notes --title "LaunchScope $version"; then
+    git push origin ":refs/tags/$version" >/dev/null 2>&1 || true
+    git tag -d "$version" >/dev/null
+    echo "GitHub Release 创建失败，本轮版本标签已回滚；已推送的源码分支保留。" >&2
+    exit 1
+  fi
 fi
