@@ -60,7 +60,13 @@ struct BackgroundTaskScanner: Sendable {
             guard let label else { return nil }
             let executable = Self.filePath(clean(record["Executable Path"]) ?? clean(record["URL"]))
             let disposition = record["Disposition"]?.lowercased() ?? ""
-            let enabled = disposition.contains("enabled") && !disposition.contains("disabled")
+            let enabled: Bool? = if disposition.contains("disabled") {
+                false
+            } else if disposition.contains("enabled") {
+                true
+            } else {
+                nil
+            }
             let type = record["Type"]?.lowercased() ?? ""
             let source: StartupSource = type.contains("login") ? .loginItem : .backgroundTask
             let itemName = clean(record["Name"])

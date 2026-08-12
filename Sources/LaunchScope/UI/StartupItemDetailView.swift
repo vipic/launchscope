@@ -53,7 +53,7 @@ struct StartupItemDetailView: View {
 
     private func runtimeSection(_ item: StartupItem) -> some View {
         DetailSection(title: "当前状态", systemImage: "waveform.path.ecg") {
-            DetailRow(label: "状态", value: item.runtime.state.title)
+            DetailRow(label: item.statusLabel, value: item.statusTitle)
             DetailRow(label: "加载域", value: item.runtime.domain)
             DetailRow(label: "PID", value: item.runtime.processIdentifier.map(String.init))
             DetailRow(label: "上次退出码", value: item.runtime.lastExitCode.map(String.init))

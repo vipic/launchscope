@@ -66,6 +66,21 @@ final class TextScannerTests: XCTestCase {
 
         """).first)
         XCTAssertEqual(item.isEnabled, false)
+        XCTAssertEqual(item.statusTitle, "已停用")
+    }
+
+    func testBackgroundTaskWithoutDispositionKeepsEnabledStateUnknown() throws {
+        let item = try XCTUnwrap(BackgroundTaskScanner.parse("""
+        #1:
+        UUID: UNKNOWN
+        Name: Unknown Helper
+        Type: app (0x2)
+        Identifier: com.example.unknown
+
+        """).first)
+
+        XCTAssertNil(item.isEnabled)
+        XCTAssertEqual(item.statusTitle, "启用状态未知")
     }
 
     func testBackgroundTaskGroupsEmbeddedItemUnderParent() throws {

@@ -57,4 +57,32 @@ final class MetadataTests: XCTestCase {
         XCTAssertTrue(item.searchableText.contains("com.example.app"))
         XCTAssertTrue(item.searchableText.contains("team123"))
     }
+
+    func testStatusTitleUsesSourceSpecificMeaning() {
+        let enabledItem = StartupItem(
+            id: "background",
+            label: "com.example.background",
+            source: .backgroundTask,
+            isEnabled: true
+        )
+        let cronItem = StartupItem(
+            id: "cron",
+            label: "cron.1",
+            source: .cron,
+            isEnabled: true
+        )
+        let runningItem = StartupItem(
+            id: "launchd",
+            label: "com.example.agent",
+            source: .userLaunchAgent,
+            runtime: RuntimeInfo(state: .running)
+        )
+
+        XCTAssertEqual(enabledItem.statusLabel, "启用状态")
+        XCTAssertEqual(enabledItem.statusTitle, "已启用")
+        XCTAssertEqual(cronItem.statusLabel, "配置状态")
+        XCTAssertEqual(cronItem.statusTitle, "已配置")
+        XCTAssertEqual(runningItem.statusLabel, "运行状态")
+        XCTAssertEqual(runningItem.statusTitle, "正在运行")
+    }
 }

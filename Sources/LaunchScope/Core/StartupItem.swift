@@ -191,6 +191,23 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
     }
 
     var ownerName: String { attribution?.displayName ?? displayName }
+    var statusLabel: String {
+        switch source {
+        case .backgroundTask, .loginItem: "启用状态"
+        case .cron, .shellConfiguration: "配置状态"
+        default: "运行状态"
+        }
+    }
+    var statusTitle: String {
+        switch source {
+        case .backgroundTask, .loginItem:
+            isEnabled.map { $0 ? "已启用" : "已停用" } ?? "启用状态未知"
+        case .cron, .shellConfiguration:
+            isEnabled == false ? "未启用" : "已配置"
+        default:
+            runtime.state.title
+        }
+    }
     var groupName: String {
         if let name = attribution?.displayName, !name.isEmpty { return name }
         switch source {

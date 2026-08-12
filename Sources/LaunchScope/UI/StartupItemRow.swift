@@ -48,12 +48,29 @@ struct StartupItemRow: View {
     }
 
     private var runtimeBadge: some View {
-        let color: Color = switch item.runtime.state {
-        case .running: LaunchScopePalette.healthy
-        case .disabled: .secondary
-        case .notLoaded, .loaded, .unknown: .secondary
+        let color: Color = switch item.source {
+        case .backgroundTask, .loginItem:
+            item.isEnabled == true ? LaunchScopePalette.healthy : .secondary
+        case .cron, .shellConfiguration:
+            .secondary
+        default:
+            switch item.runtime.state {
+            case .running: LaunchScopePalette.healthy
+            case .disabled, .notLoaded, .loaded, .unknown: .secondary
+            }
         }
-        return StatusBadge(title: item.runtime.state.title, systemImage: "circle.fill", color: color)
+        return StatusBadge(title: item.statusTitle, systemImage: statusSystemImage, color: color)
+    }
+
+    private var statusSystemImage: String {
+        switch item.source {
+        case .backgroundTask, .loginItem:
+            item.isEnabled == true ? "checkmark.circle.fill" : "minus.circle"
+        case .cron, .shellConfiguration:
+            "checkmark.circle"
+        default:
+            "circle.fill"
+        }
     }
 
     private var signatureBadge: some View {
