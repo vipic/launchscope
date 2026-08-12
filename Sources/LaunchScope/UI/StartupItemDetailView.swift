@@ -1,4 +1,5 @@
 import SwiftUI
+import ServiceManagement
 
 struct StartupItemDetailView: View {
     var item: StartupItem?
@@ -12,6 +13,7 @@ struct StartupItemDetailView: View {
                         header(item)
                         identitySection(item)
                         runtimeSection(item)
+                        actionSection(item)
                         launchSection(item)
                         signatureSection(item)
                         configurationSection(item)
@@ -26,6 +28,34 @@ struct StartupItemDetailView: View {
         .frame(minWidth: UIConstants.detailMinimumWidth)
         .navigationSplitViewColumnWidth(min: 420, ideal: 580)
         .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private func actionSection(_ item: StartupItem) -> some View {
+        let guidance = item.guidance
+        return DetailSection(title: "建议操作", systemImage: "wrench.and.screwdriver") {
+            VStack(alignment: .leading, spacing: UIConstants.regularSpacing) {
+                Text(guidance.title).font(.callout.bold())
+                Text(guidance.summary).font(.callout).foregroundStyle(.secondary)
+
+                HStack(spacing: UIConstants.regularSpacing) {
+                    if guidance.opensLoginItemSettings {
+                        Button("打开登录项设置") {
+                            SMAppService.openSystemSettingsLoginItems()
+                        }
+                    }
+                    if let path = item.revealableSourcePath {
+                        Button("显示配置") { reveal(path) }
+                    }
+                    if let path = item.attribution?.bundlePath {
+                        Button("显示所属应用") { reveal(path) }
+                    }
+                    if let command = guidance.diagnosticCommand {
+                        Button("复制只读诊断命令") { copy(command) }
+                    }
+                }
+                .buttonStyle(.bordered)
+            }
+        }
     }
 
     private func header(_ item: StartupItem) -> some View {
@@ -114,6 +144,15 @@ struct StartupItemDetailView: View {
         let sensitiveTerms = ["token", "password", "passwd", "secret", "api_key", "apikey", "authorization"]
         let isSensitive = sensitiveTerms.contains { key.lowercased().contains($0) }
         return isSensitive && !showSensitiveValues ? "••••••••" : value
+    }
+
+    private func reveal(_ path: String) {
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+
+    private func copy(_ value: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(value, forType: .string)
     }
 }
 

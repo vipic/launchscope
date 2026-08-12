@@ -65,7 +65,7 @@ struct StartupItemListView: View {
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
         .contextMenu {
-            if let path = item.sourcePath {
+            if let path = item.revealableSourcePath {
                 Button("在 Finder 中显示配置") { reveal(path) }
             }
             if let path = item.executablePath {

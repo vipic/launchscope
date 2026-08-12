@@ -27,6 +27,7 @@ swift build -c release -Xswiftc -Osize
 rm -rf "$staging"
 mkdir -p "$contents/MacOS" "$contents/Resources" "$dist"
 cp ".build/release/LaunchScope" "$contents/MacOS/LaunchScope"
+cp "Sources/LaunchScope/Resources/AppIcon.icns" "$contents/Resources/AppIcon.icns"
 cp "scripts/Info.plist.template" "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $version" "$contents/Info.plist"

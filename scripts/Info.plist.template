@@ -8,8 +8,12 @@
   <string>com.nekutai.launchscope</string>
   <key>CFBundleName</key>
   <string>LaunchScope</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
   <key>CFBundleDisplayName</key>
   <string>LaunchScope</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundleShortVersionString</key>
   <string>0.1.0</string>
   <key>CFBundleVersion</key>
