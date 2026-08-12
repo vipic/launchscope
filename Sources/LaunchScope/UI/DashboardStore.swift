@@ -269,6 +269,17 @@ final class DashboardStore: ObservableObject {
         return items.first { $0.id == selectedItemID }
     }
 
+    var recoveryCandidates: [RecoveryCandidate] {
+        items.compactMap { item in
+            guard let action = availableControlAction(for: item), action.isRecoveryAction else { return nil }
+            return RecoveryCandidate(item: item, action: action)
+        }
+    }
+
+    var recoverableHistory: [ControlHistoryEntry] {
+        controlHistory.filter(canUndo)
+    }
+
     func annotation(for item: StartupItem) -> ItemAnnotation? { annotations[item.privacySafeKey] }
 
     func isTrusted(_ item: StartupItem) -> Bool { annotation(for: item)?.isTrusted == true }

@@ -13,6 +13,15 @@ final class ControlHistoryTests: XCTestCase {
         XCTAssertEqual(StartupItemControlAction.enableShellLine.inverse, .disableShellLine)
     }
 
+    func testRecoveryActionClassification() {
+        XCTAssertTrue(StartupItemControlAction.enable.isRecoveryAction)
+        XCTAssertTrue(StartupItemControlAction.enableCron.isRecoveryAction)
+        XCTAssertTrue(StartupItemControlAction.enableShellLine.isRecoveryAction)
+        XCTAssertTrue(StartupItemControlAction.startHomebrew.isRecoveryAction)
+        XCTAssertFalse(StartupItemControlAction.disable.isRecoveryAction)
+        XCTAssertFalse(StartupItemControlAction.stopHomebrew.isRecoveryAction)
+    }
+
     func testFailedEntryCannotBeUndone() {
         let entry = makeEntry(outcome: .failure)
         XCTAssertNil(entry.inverseAction)

@@ -10,6 +10,7 @@ struct DashboardView: View {
     @State private var showControlHistory = false
     @State private var showScanChanges = false
     @State private var showAuditExport = false
+    @State private var showRecoveryCenter = false
 
     var body: some View {
         NavigationSplitView {
@@ -45,6 +46,12 @@ struct DashboardView: View {
                     showControlHistory = true
                 } label: {
                     Label("操作历史", systemImage: "clock.arrow.circlepath")
+                }
+
+                Button {
+                    showRecoveryCenter = true
+                } label: {
+                    Label("恢复中心", systemImage: "lifepreserver")
                 }
 
                 Button {
@@ -114,6 +121,9 @@ struct DashboardView: View {
                 changes: store.scanChanges,
                 scannedAt: store.scannedAt
             )
+        }
+        .sheet(isPresented: $showRecoveryCenter) {
+            RecoveryCenterView(store: store)
         }
         .alert(item: $store.controlResult) { result in
             Alert(
