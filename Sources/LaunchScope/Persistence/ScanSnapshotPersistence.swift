@@ -1,8 +1,13 @@
 import Foundation
 
 protocol ScanSnapshotPersisting: Sendable {
-    func load() throws -> ScanSnapshot?
-    func save(_ snapshot: ScanSnapshot) throws
+    func loadHistory() throws -> [ScanSnapshot]
+    func saveHistory(_ snapshots: [ScanSnapshot]) throws
+}
+
+struct ScanSnapshotArchive: Codable, Equatable, Sendable {
+    var schemaVersion = 2
+    var snapshots: [ScanSnapshot]
 }
 
 struct ScanSnapshotPersistence: ScanSnapshotPersisting, Sendable {
@@ -19,18 +24,23 @@ struct ScanSnapshotPersistence: ScanSnapshotPersisting, Sendable {
         }
     }
 
-    func load() throws -> ScanSnapshot? {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
+    func loadHistory() throws -> [ScanSnapshot] {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return [] }
         let data = try Data(contentsOf: fileURL)
-        return try JSONDecoder.snapshotDecoder.decode(ScanSnapshot.self, from: data)
+        let decoder = JSONDecoder.snapshotDecoder
+        if let archive = try? decoder.decode(ScanSnapshotArchive.self, from: data) {
+            return archive.snapshots.sorted { $0.scannedAt < $1.scannedAt }
+        }
+        return [try decoder.decode(ScanSnapshot.self, from: data)]
     }
 
-    func save(_ snapshot: ScanSnapshot) throws {
+    func saveHistory(_ snapshots: [ScanSnapshot]) throws {
         try FileManager.default.createDirectory(
             at: fileURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        let data = try JSONEncoder.snapshotEncoder.encode(snapshot)
+        let retained = Array(snapshots.sorted { $0.scannedAt < $1.scannedAt }.suffix(30))
+        let data = try JSONEncoder.snapshotEncoder.encode(ScanSnapshotArchive(snapshots: retained))
         try data.write(to: fileURL, options: .atomic)
     }
 }

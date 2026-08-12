@@ -12,6 +12,7 @@ struct DashboardView: View {
     @State private var showAuditExport = false
     @State private var showRecoveryCenter = false
     @State private var showPrivilegedHelper = false
+    @State private var showAuditTimeline = false
     @StateObject private var privilegedHelper = PrivilegedHelperManager()
 
     var body: some View {
@@ -50,6 +51,12 @@ struct DashboardView: View {
                     showControlHistory = true
                 } label: {
                     Label("操作历史", systemImage: "clock.arrow.circlepath")
+                }
+
+                Button {
+                    showAuditTimeline = true
+                } label: {
+                    Label("审计时间线", systemImage: "clock")
                 }
 
                 Button {
@@ -125,6 +132,9 @@ struct DashboardView: View {
         .task { store.refreshIfNeeded() }
         .sheet(isPresented: $showControlHistory) {
             ControlHistoryView(store: store)
+        }
+        .sheet(isPresented: $showAuditTimeline) {
+            AuditTimelineView(store: store)
         }
         .sheet(isPresented: $showScanChanges) {
             ScanChangesView(store: store)

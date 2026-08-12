@@ -22,6 +22,7 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var controlHistory: [ControlHistoryEntry] = []
     @Published private(set) var historyPersistenceError: String?
     @Published private(set) var scanChanges: [ScanChange] = []
+    @Published private(set) var snapshotHistory: [ScanSnapshot] = []
     @Published private(set) var comparisonScannedAt: Date?
     @Published private(set) var snapshotPersistenceError: String?
     @Published private(set) var annotations: [String: ItemAnnotation] = [:]
@@ -54,7 +55,8 @@ final class DashboardStore: ObservableObject {
             historyPersistenceError = "无法读取操作历史：\(error.localizedDescription)"
         }
         do {
-            previousSnapshot = try snapshotPersistence.load()
+            snapshotHistory = try snapshotPersistence.loadHistory()
+            previousSnapshot = snapshotHistory.last
         } catch {
             snapshotPersistenceError = "无法读取上次扫描快照：\(error.localizedDescription)"
         }
@@ -248,9 +250,11 @@ final class DashboardStore: ObservableObject {
             comparisonScannedAt = nil
         }
         previousSnapshot = current
+        snapshotHistory.append(current)
+        snapshotHistory = Array(snapshotHistory.sorted { $0.scannedAt < $1.scannedAt }.suffix(30))
 
         do {
-            try snapshotPersistence.save(current)
+            try snapshotPersistence.saveHistory(snapshotHistory)
             snapshotPersistenceError = nil
         } catch {
             snapshotPersistenceError = "无法保存扫描快照：\(error.localizedDescription)"
@@ -323,6 +327,10 @@ final class DashboardStore: ObservableObject {
 
     func riskAssessment(for item: StartupItem) -> RiskAssessment {
         RiskAssessment.assess(item, isNew: isNew(item))
+    }
+
+    var auditTimeline: [AuditTimelineEvent] {
+        AuditTimeline.build(snapshots: snapshotHistory, controlHistory: controlHistory)
     }
 
     func saveAnnotation(for item: StartupItem, note: String, tags: [String], isTrusted: Bool) {

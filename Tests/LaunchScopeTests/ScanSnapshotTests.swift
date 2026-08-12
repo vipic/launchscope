@@ -49,14 +49,34 @@ final class ScanSnapshotTests: XCTestCase {
         )
         let snapshot = snapshot(items: [cron], time: 100)
         let persistence = ScanSnapshotPersistence(fileURL: fileURL)
-        try persistence.save(snapshot)
+        try persistence.saveHistory([snapshot])
 
-        XCTAssertEqual(try persistence.load(), snapshot)
+        XCTAssertEqual(try persistence.loadHistory(), [snapshot])
         let text = try String(contentsOf: fileURL, encoding: .utf8)
         XCTAssertFalse(text.contains("SECRET_PATH"))
         XCTAssertFalse(text.contains("SECRET_TOKEN"))
         XCTAssertFalse(text.contains("curl"))
         XCTAssertTrue(text.contains("Cron 任务"))
+    }
+
+    func testPersistenceMigratesLegacySnapshotAndRetainsThirtyNewest() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("launchscope-snapshot-migration-\(UUID().uuidString)", isDirectory: true)
+        let fileURL = directory.appendingPathComponent("snapshot.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let legacy = snapshot(items: [makeItem(id: "legacy", label: "com.example.legacy")], time: 1)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(legacy).write(to: fileURL)
+        let persistence = ScanSnapshotPersistence(fileURL: fileURL)
+        XCTAssertEqual(try persistence.loadHistory(), [legacy])
+
+        let history = (1...35).map { snapshot(items: [], time: TimeInterval($0)) }
+        try persistence.saveHistory(history)
+        let loaded = try persistence.loadHistory()
+        XCTAssertEqual(loaded.count, 30)
+        XCTAssertEqual(loaded.first?.scannedAt, Date(timeIntervalSince1970: 6))
     }
 
     private func snapshot(items: [StartupItem], time: TimeInterval) -> ScanSnapshot {
