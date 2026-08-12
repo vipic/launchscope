@@ -1,0 +1,39 @@
+[tasks.build]
+description = "构建 Debug 版本"
+run = "swift build"
+
+[tasks."build:release"]
+description = "构建 Release 版本"
+run = "swift build -c release -Xswiftc -Osize"
+
+[tasks.test]
+description = "运行 Swift 测试"
+run = "swift test"
+
+[tasks."test:coverage"]
+description = "运行带覆盖率的 Swift 测试"
+run = "swift test --enable-code-coverage"
+
+[tasks.coverage]
+description = "检查测试覆盖率"
+run = "scripts/check_coverage.sh 35"
+
+[tasks."lint:scripts"]
+description = "检查仓库 Shell 脚本语法"
+run = "scripts/check_shell.sh"
+
+[tasks.check]
+description = "运行完整本地验证"
+run = "mise run lint:scripts && mise run test:coverage && mise run coverage && mise run build:release"
+
+[tasks.deploy]
+description = "构建、签名并启动 LaunchScope Dev.app"
+run = "./deploy.sh"
+
+[tasks.release]
+description = "构建签名 DMG；版本号通过 -- 传入"
+run = "./release.sh"
+
+[tasks.publish]
+description = "构建并发布 GitHub Release；版本号通过 -- 传入"
+run = "scripts/publish.sh"

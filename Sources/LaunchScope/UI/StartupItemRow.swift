@@ -1,0 +1,67 @@
+import SwiftUI
+
+struct StartupItemRow: View {
+    var item: StartupItem
+    var isSelected: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: UIConstants.regularSpacing) {
+            AppIconView(item: item)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 7) {
+                    Text(item.displayName)
+                        .font(.headline)
+                        .lineLimit(1)
+                    if item.targetExists == false {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(LaunchScopePalette.warning)
+                            .help("执行目标不存在")
+                    }
+                }
+
+                Text(secondaryText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .textSelection(.enabled)
+
+                HStack(spacing: 6) {
+                    StatusBadge(title: item.source.compactTitle, systemImage: item.source.systemImage)
+                    runtimeBadge
+                    signatureBadge
+                }
+                .lineLimit(1)
+            }
+            Spacer(minLength: 4)
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 5)
+        .contentShape(Rectangle())
+        .background(isSelected ? LaunchScopePalette.selectedFill : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: UIConstants.cornerRadius, style: .continuous))
+    }
+
+    private var secondaryText: String {
+        if item.displayName != item.label { return item.label }
+        return item.executablePath ?? item.sourcePath ?? item.label
+    }
+
+    private var runtimeBadge: some View {
+        let color: Color = switch item.runtime.state {
+        case .running: LaunchScopePalette.healthy
+        case .disabled: .secondary
+        case .notLoaded, .loaded, .unknown: .secondary
+        }
+        return StatusBadge(title: item.runtime.state.title, systemImage: "circle.fill", color: color)
+    }
+
+    private var signatureBadge: some View {
+        let color: Color = switch item.signature.kind {
+        case .apple, .developerID, .appStore: LaunchScopePalette.healthy
+        case .unsigned, .invalid: LaunchScopePalette.warning
+        case .adHoc, .unavailable: .secondary
+        }
+        return StatusBadge(title: item.signature.kind.title, systemImage: "checkmark.seal", color: color)
+    }
+}

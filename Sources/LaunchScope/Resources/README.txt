@@ -1,0 +1,1 @@
+LaunchScope bundled resources.
