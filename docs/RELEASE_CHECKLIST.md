@@ -57,7 +57,7 @@ mise run publish -- 0.1.0
 
 - 发布命令先确认 `origin`、GitHub 权限及版本不存在，再原子推送当前源码分支与版本标签，并上传 DMG 与 SHA-256 文件。
 - 标签推送或 Release 创建失败时回滚本轮创建的标签，避免留下半发布状态；已安全推送的源码分支保留。
-- 检查 GitHub Release 标题、自动生成说明和两个附件。
+- 检查 GitHub Release 标题、由 Conventional Commits 生成的逐条说明和两个附件。
 - 保留上一版本安装包；出现严重问题时撤下新 Release，不自动覆盖用户审计数据。
 
 发布脚本不会覆盖已有 Release 或资产；每次执行的阶段耗时、退出码和完整命令输出写入 `.local/logs/release/` 或 `.local/logs/publish/`，可用 `mise run logs:release`、`mise run logs:publish` 查看。CI 不持有稳定签名私钥，因此只运行 `mise run check`，正式 DMG 必须在受控 Mac 本机构建。

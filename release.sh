@@ -161,6 +161,8 @@ echo "校验文件：$checksum"
 
 if $publish; then
   step "7-GitHub 发布"
+  release_notes="$staging/release-notes.md"
+  scripts/generate_release_notes.sh > "$release_notes"
   git tag -a "$version" -m "LaunchScope $version"
   if ! command_log_run push_atomic git push --atomic origin "HEAD:refs/heads/$branch" "refs/tags/$version"; then
     git tag -d "$version" >/dev/null
@@ -168,7 +170,7 @@ if $publish; then
     exit 1
   fi
   if ! command_log_run create_release gh release create "$version" "$dmg" "$checksum" \
-      --repo "$repository" --generate-notes --title "LaunchScope $version"; then
+      --repo "$repository" --notes-file "$release_notes" --title "LaunchScope $version"; then
     git push origin ":refs/tags/$version" >/dev/null 2>&1 || true
     git tag -d "$version" >/dev/null
     echo "GitHub Release 创建失败，本轮版本标签已回滚；已推送的源码分支保留。" >&2
