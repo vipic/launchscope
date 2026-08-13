@@ -37,6 +37,8 @@ LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd�
 - 检测目标缺失残留、重复 Label/执行目标、Homebrew 与 launchd 重叠及重复 Shell 命令
 - 保留最近 30 次脱敏扫描快照，以时间线查看首次发现、状态变化、移除和控制操作，并可选择两个扫描点比较
 - 完善 VoiceOver 语义、键盘筛选与工具栏快捷键，并为 5,000 项数据分析和签名应用辅助功能 UI 冒烟提供自动化验收
+- 提供原生设置面板，集中管理列表、隐私、通知与自动更新检查偏好
+- 每天最多检查一次 GitHub 最新正式版本，并由用户主动打开下载页；不会静默下载或替换应用
 
 ## 开发
 
@@ -58,6 +60,8 @@ mise run snapshot:test
 正式发布使用 `mise run release -- <x.y.z>`；也可先用 `mise run version:next` 查看建议版本，或用 `mise run release:auto` 只构建本地制品。命令要求工作区干净，强制执行统一验证，验收应用结构与稳定签名，验证美化 DMG 内的应用及 `/Applications` 拖放快捷入口，并生成 SHA-256 校验文件。阶段耗时和完整命令输出保存在已忽略的 `.local/logs/`，可用 `mise run logs:release` 查看。完整流程见 [发布检查清单](docs/RELEASE_CHECKLIST.md)。
 
 当前公开制品使用稳定自签名证书，但没有 Apple Developer ID 公证。首次打开时可能遇到 Gatekeeper 提示，需要在系统设置中明确允许；CI 只执行源码与 release 编译验证，不生成或上传正式 DMG。
+
+应用内更新检查只读取 `vipic/launchscope` 的 GitHub 最新 Release 元数据。更新仍通过正式 DMG 手动安装，并应使用 Release 同时提供的 `.sha256` 文件核对完整性。
 
 ## 信息边界
 

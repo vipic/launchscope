@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 struct LaunchScopeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var dashboardStore = DashboardStore()
+    @StateObject private var updateStore = AppUpdateStore()
 
     init() {
         if CommandLine.arguments.contains("--scan-summary") {
@@ -42,7 +43,7 @@ struct LaunchScopeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            DashboardView(store: dashboardStore)
+            DashboardView(store: dashboardStore, updateStore: updateStore)
         }
         .defaultSize(width: 1320, height: 780)
         .windowResizability(.contentMinSize)
@@ -58,6 +59,10 @@ struct LaunchScopeApp: App {
                 Button("冲突与残留") { dashboardStore.selectFilter(.findings) }
                     .keyboardShortcut("4", modifiers: .command)
             }
+        }
+
+        Settings {
+            SettingsView(dashboardStore: dashboardStore, updateStore: updateStore)
         }
     }
 }

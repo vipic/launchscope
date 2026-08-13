@@ -3,6 +3,8 @@ import ServiceManagement
 
 struct DashboardView: View {
     @ObservedObject var store: DashboardStore
+    @ObservedObject var updateStore: AppUpdateStore
+    @Environment(\.openSettings) private var openSettings
     @AppStorage(PreferenceKeys.hideAppleItems) private var hideAppleItems = true
     @AppStorage(PreferenceKeys.showSensitiveValues) private var showSensitiveValues = false
     @AppStorage(PreferenceKeys.groupByOwner) private var groupByOwner = true
@@ -106,6 +108,8 @@ struct DashboardView: View {
                     Button("打开系统登录项设置") {
                         SMAppService.openSystemSettingsLoginItems()
                     }
+                    Divider()
+                    Button("LaunchScope 设置…") { openSettings() }
                 } label: {
                     Label("显示选项", systemImage: "slider.horizontal.3")
                 }
@@ -165,7 +169,10 @@ struct DashboardView: View {
                 .background(.bar)
             }
         }
-        .task { store.refreshIfNeeded() }
+        .task {
+            store.refreshIfNeeded()
+            updateStore.checkAutomaticallyIfNeeded()
+        }
         .sheet(isPresented: $showControlHistory) {
             ControlHistoryView(store: store)
         }
