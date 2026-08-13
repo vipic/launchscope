@@ -33,11 +33,15 @@ struct DashboardView: View {
                 )
             }
         } detail: {
-            StartupItemDetailView(
-                store: store,
-                item: store.selectedItem,
-                showSensitiveValues: showSensitiveValues
-            )
+            if store.selectedFilter == .findings {
+                StartupFindingDetailView(store: store, finding: store.selectedFinding)
+            } else {
+                StartupItemDetailView(
+                    store: store,
+                    item: store.selectedItem,
+                    showSensitiveValues: showSensitiveValues
+                )
+            }
         }
         .searchable(text: $store.searchText, placement: .toolbar, prompt: "搜索名称、标识、路径或参数")
         .toolbar {

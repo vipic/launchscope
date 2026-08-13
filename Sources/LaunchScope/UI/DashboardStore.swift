@@ -36,6 +36,7 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var resourcesObservedAt: Date?
     @Published private(set) var isObservingResources = false
     @Published var selectedItemID: String?
+    @Published var selectedFindingID: String?
     @Published var selectedFilter: DashboardFilter = .thirdParty
     @Published var searchText = ""
     @Published private(set) var listFocusRequest = 0
@@ -250,6 +251,14 @@ final class DashboardStore: ObservableObject {
         if self.selectedItemID == nil {
             self.selectedItemID = filteredItems(hideAppleItems: false, hideTrustedItems: false).first?.id
         }
+
+        let findingIDs = Set(findings.map(\.id))
+        if let selectedFindingID, !findingIDs.contains(selectedFindingID) {
+            self.selectedFindingID = nil
+        }
+        if selectedFilter == .findings, selectedFindingID == nil {
+            selectedFindingID = findings.first?.id
+        }
     }
 
     private func updateSnapshot(with report: ScanReport) {
@@ -320,6 +329,11 @@ final class DashboardStore: ObservableObject {
         return items.first { $0.id == selectedItemID }
     }
 
+    var selectedFinding: StartupFinding? {
+        guard let selectedFindingID else { return nil }
+        return findings.first { $0.id == selectedFindingID }
+    }
+
     var recoveryCandidates: [RecoveryCandidate] {
         items.compactMap { item in
             guard let action = availableControlAction(for: item), action.isRecoveryAction else { return nil }
@@ -344,7 +358,18 @@ final class DashboardStore: ObservableObject {
     func selectFilter(_ filter: DashboardFilter) {
         selectedFilter = filter
         selectedItemID = nil
+        selectedFindingID = filter == .findings ? findings.first?.id : nil
         listFocusRequest &+= 1
+    }
+
+    func selectFinding(_ finding: StartupFinding) {
+        selectedFindingID = finding.id
+    }
+
+    func showItem(_ item: StartupItem) {
+        selectedFilter = .all
+        selectedFindingID = nil
+        selectedItemID = item.id
     }
 
     func isNew(_ item: StartupItem) -> Bool {
