@@ -14,13 +14,13 @@ on run arguments
 
         tell icon view options of volumeWindow
             set arrangement to not arranged
-            set icon size to 128
+            set icon size to 120
             set text size to 13
             set background picture to file ".background:background.tiff" of volumeFolder
         end tell
 
-        set position of item "LaunchScope.app" of volumeFolder to {139, 192}
-        set position of item "Applications" of volumeFolder to {522, 192}
+        set position of item "LaunchScope.app" of volumeFolder to {139, 194}
+        set position of item "Applications" of volumeFolder to {521, 194}
         update volumeFolder without registering applications
         delay 2
         close volumeWindow
