@@ -41,7 +41,7 @@ mise run check
 - `Registered / Allowed / Loaded / Running` 不得合并成一个布尔值。
 - 新增外部命令必须通过 `CommandRunning`，必须设置超时并捕获 stderr。
 
-<!-- workspace-policy:start hash=2b7fa55c1aed -->
+<!-- workspace-policy:start hash=cb221e2eabcb -->
 ## 跨项目统一规则
 
 以下区块由私有 `workspace-meta` 生成；项目专属规则请写在区块外。
@@ -81,5 +81,10 @@ mise run check
 
 - [SWIFT-001] 使用 SwiftPM executable（swift-tools 6.0）和既有脚本组装应用，不新增 Xcode project。
 - [SWIFT-002] 保持 Nekutai 自签名链路与 `com.nekutai.*` bundle id，严禁 ad-hoc 签名。
+
+### macOS 发布
+
 - [SWIFT-003] 新增 shell 脚本纳入 `lint:scripts`；发布继续使用既有 release.sh、DMG 和 GitHub Release 流程。
+- [SWIFT-004] 正式发布必须验收最终 DMG：挂载后复制 App 到隔离临时目录，校验 bundle id、版本、关键资源与非 ad-hoc 签名，并完成真实启动冒烟；任一步失败都停止发布。
+- [SWIFT-005] 发布说明从上一个正式标签到目标提交生成，保留逐条用户可见变更；release、tag 与同版本制品不得静默覆盖。
 <!-- workspace-policy:end -->
