@@ -2,6 +2,18 @@ import XCTest
 @testable import LaunchScope
 
 final class MetadataTests: XCTestCase {
+    func testComponentRoleAndNeedHintExplainCommonAppHelpers() {
+        let browser = StartupItem(id: "browser", label: "com.example.browser-helper", displayName: "Browser Helper", source: .loginItem)
+        let launcher = StartupItem(id: "launcher", label: "com.example.launcher", displayName: "Launcher", source: .backgroundTask)
+        let quickLook = StartupItem(id: "quicklook", label: "com.cleanshot.quickLookExtension", displayName: "QuickLookExtension", source: .loginItem)
+        let thumbnail = StartupItem(id: "thumbnail", label: "com.cleanshot.quicklookThumbnailingExtension", displayName: "QuickLookThumbnailingExtension", source: .loginItem)
+        XCTAssertEqual(browser.componentRole, "浏览器集成")
+        XCTAssertEqual(launcher.componentRole, "快速启动组件")
+        XCTAssertEqual(quickLook.componentRole, "Quick Look 预览扩展")
+        XCTAssertEqual(thumbnail.componentRole, "缩略图扩展")
+        XCTAssertTrue(quickLook.componentNeedHint.contains("Finder"))
+    }
+
     func testConfigurationFormatterHandlesStructuredKeepAlive() {
         let description = ConfigurationFormatter.keepAliveDescription([
             "NetworkState": true,

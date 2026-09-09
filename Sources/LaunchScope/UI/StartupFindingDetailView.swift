@@ -10,6 +10,9 @@ struct StartupFindingDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: UIConstants.sectionSpacing) {
                         header(finding)
+                        if relatedItems(finding).contains(where: { [.backgroundTask, .loginItem].contains($0.source) }) {
+                            Text(store.backgroundTaskFreshness).font(.callout).foregroundStyle(.secondary)
+                        }
                         explanationSection(finding)
                         affectedItemsSection(finding)
                     }
@@ -34,7 +37,7 @@ struct StartupFindingDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: UIConstants.cornerRadius, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(finding.kind.title)
+                Text(finding.category.title + " · " + finding.kind.title)
                     .font(.title2.bold())
                 Text(finding.title)
                     .font(.callout)
@@ -96,6 +99,11 @@ struct StartupFindingDetailView: View {
             }
 
             FindingDetailRow(label: "当前状态", value: item.statusTitle)
+            FindingDetailRow(label: "组件角色", value: item.componentRole)
+            FindingDetailRow(label: "功能提示", value: item.componentNeedHint)
+            FindingDetailRow(label: "加载域", value: item.runtime.domain ?? "未知 / 不适用")
+            FindingDetailRow(label: "启动条件", value: item.scheduleDescription ?? item.keepAliveDescription ?? item.runAtLoad.map { $0 ? "加载时运行" : "按需触发" } ?? "未知")
+            FindingDetailRow(label: "参数", value: item.arguments.isEmpty ? "未提供" : "已隐藏；在完整详情中核对")
             FindingDetailRow(label: "配置路径", value: item.sourcePath)
             FindingDetailRow(label: "执行文件", value: item.executablePath)
 
@@ -125,7 +133,9 @@ struct StartupFindingDetailView: View {
         if finding.kind == .missingTarget {
             return "请先核对配置来源与所属应用。LaunchScope 只提供只读证据，不会自动删除残留配置。"
         }
-        return "请比较各项目的来源、状态和配置路径，确认应由哪一侧负责启动；LaunchScope 不会自动选择或停用其中任何项目。"
+        if finding.category == .system { return "这些是 Apple 系统参考记录，通常无需处理。共用执行文件本身不是故障证据。" }
+        if finding.category == .related { return "这是一组关联记录，不计入待核实数量。优先通过所属应用或 Homebrew 管理，并确认操作影响范围。" }
+        return "先核对加载域、参数与启动条件；只有确认同一工作被重复触发后，再从完整详情选择可恢复的操作。"
     }
 }
 

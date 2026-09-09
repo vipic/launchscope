@@ -56,7 +56,7 @@ struct LaunchScopeApp: App {
                     .keyboardShortcut("2", modifiers: .command)
                 Button("需要关注") { dashboardStore.selectFilter(.highRisk) }
                     .keyboardShortcut("3", modifiers: .command)
-                Button("冲突与残留") { dashboardStore.selectFilter(.findings) }
+                Button("发现与关联") { dashboardStore.selectFilter(.findings) }
                     .keyboardShortcut("4", modifiers: .command)
             }
         }

@@ -194,6 +194,38 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
     }
 
     var ownerName: String { attribution?.displayName ?? displayName }
+
+    /// 将应用内部的多个后台记录翻译为便于判断的组件角色。
+    /// 这是名称和来源提示，不是对厂商实现的绝对断言。
+    var componentRole: String {
+        let text = "\(displayName) \(label) \(executablePath ?? "")".lowercased()
+        if text.contains("thumbnail") || text.contains("quicklookthumbnailing") { return "缩略图扩展" }
+        if text.contains("quicklook") || text.contains("quick look") { return "Quick Look 预览扩展" }
+        if text.contains("browser") { return "浏览器集成" }
+        if text.contains("launcher") { return "快速启动组件" }
+        if text.contains("loginitem") || text.contains("login item") || source == .loginItem { return "登录项扩展" }
+        if text.contains("helper") || text.contains("agent") { return "辅助组件" }
+        if source == .backgroundTask { return "后台组件" }
+        if source == .homebrewService { return "后台服务" }
+        if source == .cron { return "定时任务" }
+        if source == .shellConfiguration { return "终端启动命令" }
+        if source == .launchDaemon || source == .globalLaunchAgent { return "系统服务组件" }
+        return "应用组件"
+    }
+
+    var componentNeedHint: String {
+        switch componentRole {
+        case "Quick Look 预览扩展": "只在 Finder 按空格预览时需要；不用预览可考虑关闭"
+        case "缩略图扩展": "只影响 Finder 缩略图显示；不用对应缩略图可考虑关闭"
+        case "浏览器集成": "只在使用对应浏览器集成功能时需要"
+        case "快速启动组件": "只在需要快速启动或快捷入口时需要"
+        case "登录项扩展", "后台组件": "影响应用的后台通知、同步或自动功能，按需决定"
+        case "辅助组件": "通常由主应用按需调用，先核对所属应用功能"
+        case "后台服务", "系统服务组件": "可能提供持续服务或跨用户能力，停用前核对依赖"
+        case "定时任务", "终端启动命令": "按自己的任务或终端使用习惯决定"
+        default: "这是所属应用的一部分，是否需要取决于你是否使用对应功能"
+        }
+    }
     var statusLabel: String {
         switch source {
         case .backgroundTask, .loginItem: "启用状态"

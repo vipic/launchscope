@@ -37,6 +37,7 @@ final class DashboardStore: ObservableObject {
     @Published private(set) var isObservingResources = false
     @Published var selectedItemID: String?
     @Published var selectedFindingID: String?
+    @Published var includeReferenceFindings = false
     @Published var selectedFilter: DashboardFilter = .thirdParty
     @Published var searchText = ""
     @Published private(set) var listFocusRequest = 0
@@ -252,12 +253,12 @@ final class DashboardStore: ObservableObject {
             self.selectedItemID = filteredItems(hideAppleItems: false, hideTrustedItems: false).first?.id
         }
 
-        let findingIDs = Set(findings.map(\.id))
+        let findingIDs = Set(visibleFindings.map(\.id))
         if let selectedFindingID, !findingIDs.contains(selectedFindingID) {
             self.selectedFindingID = nil
         }
         if selectedFilter == .findings, selectedFindingID == nil {
-            selectedFindingID = findings.first?.id
+            selectedFindingID = visibleFindings.first?.id
         }
     }
 
@@ -285,7 +286,7 @@ final class DashboardStore: ObservableObject {
     func filteredItems(hideAppleItems: Bool, hideTrustedItems: Bool) -> [StartupItem] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return items.filter { item in
-            if hideAppleItems, item.isAppleItem { return false }
+            if hideAppleItems, item.isAppleItem, selectedFilter != .apple { return false }
             if hideTrustedItems, isTrusted(item) { return false }
             let filterMatches: Bool
             switch selectedFilter {
@@ -296,7 +297,7 @@ final class DashboardStore: ObservableObject {
             case .missingTarget: filterMatches = item.targetExists == false
             case .disabled: filterMatches = item.isEnabled == false || item.runtime.state == .disabled
             case .untrusted: filterMatches = !item.isAppleItem && !isTrusted(item)
-            case .highRisk: filterMatches = riskAssessment(for: item).level.requiresAttention
+            case .highRisk: filterMatches = !item.isAppleItem && riskAssessment(for: item).level.requiresAttention
             case .findings: filterMatches = false
             case .issues: filterMatches = false
             case .source(let source): filterMatches = item.source == source
@@ -317,8 +318,8 @@ final class DashboardStore: ObservableObject {
         case .missingTarget: items.count { $0.targetExists == false }
         case .disabled: items.count { $0.isEnabled == false || $0.runtime.state == .disabled }
         case .untrusted: items.count { !$0.isAppleItem && !isTrusted($0) }
-        case .highRisk: items.count { riskAssessment(for: $0).level.requiresAttention }
-        case .findings: findings.count
+        case .highRisk: items.count { !$0.isAppleItem && riskAssessment(for: $0).level.requiresAttention }
+        case .findings: findings.count { $0.category.requiresReview }
         case .issues: issues.count
         case .source(let source): items.count { $0.source == source }
         }
@@ -327,6 +328,22 @@ final class DashboardStore: ObservableObject {
     var selectedItem: StartupItem? {
         guard let selectedItemID else { return nil }
         return items.first { $0.id == selectedItemID }
+    }
+
+    var visibleFindings: [StartupFinding] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return findings.filter { finding in
+            (includeReferenceFindings || finding.category.requiresReview) &&
+            (query.isEmpty || finding.title.localizedCaseInsensitiveContains(query) ||
+             finding.kind.title.localizedCaseInsensitiveContains(query))
+        }
+    }
+
+    var backgroundTaskFreshness: String {
+        guard let date = backgroundTasksUpdatedAt else { return "系统后台项目尚未读取；当前扫描不包含这部分记录。" }
+        let age = Date().timeIntervalSince(date)
+        let status = age > 24 * 60 * 60 ? "缓存已超过 24 小时，注册与允许状态待更新" : "注册与允许状态来自最近缓存"
+        return "\(status)（\(date.formatted(date: .abbreviated, time: .shortened))）。目标与签名在本次扫描核实。"
     }
 
     var selectedFinding: StartupFinding? {
@@ -358,7 +375,7 @@ final class DashboardStore: ObservableObject {
     func selectFilter(_ filter: DashboardFilter) {
         selectedFilter = filter
         selectedItemID = nil
-        selectedFindingID = filter == .findings ? findings.first?.id : nil
+        selectedFindingID = filter == .findings ? visibleFindings.first?.id : nil
         listFocusRequest &+= 1
     }
 
@@ -367,7 +384,7 @@ final class DashboardStore: ObservableObject {
     }
 
     func showItem(_ item: StartupItem) {
-        selectedFilter = .all
+        selectedFilter = item.isAppleItem ? .apple : .all
         selectedFindingID = nil
         selectedItemID = item.id
     }

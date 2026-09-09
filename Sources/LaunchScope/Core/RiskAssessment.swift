@@ -11,9 +11,9 @@ enum RiskLevel: Int, Codable, Comparable, Sendable {
 
     var title: String {
         switch self {
-        case .low: "低风险"
-        case .medium: "中风险"
-        case .high: "高风险"
+        case .low: "未见异常"
+        case .medium: "待核实"
+        case .high: "优先核查"
         }
     }
 
@@ -29,6 +29,10 @@ enum RiskLevel: Int, Codable, Comparable, Sendable {
 struct RiskAssessment: Equatable, Sendable {
     var level: RiskLevel
     var reasons: [String]
+    var hasUnknownEvidence: Bool = false
+
+    var title: String { level == .low && hasUnknownEvidence ? "信息不足" : level.title }
+    var systemImage: String { level == .low && hasUnknownEvidence ? "questionmark.circle" : level.systemImage }
 
     static func assess(_ item: StartupItem, isNew: Bool = false) -> RiskAssessment {
         var level: RiskLevel = .low
@@ -40,7 +44,7 @@ struct RiskAssessment: Equatable, Sendable {
         }
 
         if item.targetExists == false {
-            raise(.high, "配置仍存在，但执行目标已经缺失，可能是卸载后的残留。")
+            raise(.medium, "本次核实未找到执行目标，可能是卸载残留或应用迁移；不代表恶意软件。")
         }
 
         switch item.signature.kind {
@@ -52,7 +56,7 @@ struct RiskAssessment: Equatable, Sendable {
         case .adHoc:
             raise(.medium, "执行目标仅使用临时签名，无法确认稳定发布者。")
         case .unavailable:
-            raise(.medium, "当前无法验证执行目标的签名状态。")
+            reasons.append("当前无法验证执行目标的签名状态；未知不等于签名无效。")
         case .developerID, .appStore:
             reasons.append("代码签名可验证为已识别的第三方发布渠道。")
         case .apple:
@@ -62,23 +66,23 @@ struct RiskAssessment: Equatable, Sendable {
         if !item.isAppleItem {
             switch item.source {
             case .launchDaemon:
-                raise(.medium, "项目在系统级 LaunchDaemon 域中运行，影响所有用户。")
+                reasons.append("项目在系统级 LaunchDaemon 域中运行，影响所有用户。")
             case .globalLaunchAgent:
-                raise(.medium, "项目由全局 LaunchAgent 配置为用户登录后启动。")
+                reasons.append("项目由全局 LaunchAgent 配置为用户登录后启动。")
             case .cron:
-                raise(.medium, "Cron 可按计划或重启触发命令，通常不隶属于应用界面。")
+                reasons.append("Cron 可按计划或重启触发命令，通常不隶属于应用界面。")
             case .shellConfiguration:
-                raise(.medium, "命令来自 Shell 初始化文件，会随交互式终端环境加载。")
+                reasons.append("命令来自 Shell 初始化文件，不一定在开机时执行。")
             default:
                 break
             }
         }
 
         if item.runAtLoad == true {
-            raise(.medium, "配置要求加载后立即执行。")
+            reasons.append("配置要求加载后立即执行，这是正常的启动条件。")
         }
         if let keepAlive = item.keepAliveDescription, !keepAlive.isEmpty, keepAlive != "false" {
-            raise(.medium, "配置包含 KeepAlive 持续运行条件。")
+            reasons.append("配置包含 KeepAlive 持续运行条件，本身不表示异常。")
         }
         if isNew && !item.isAppleItem {
             raise(.medium, "这是相较上次扫描新增且尚未建立历史基线的第三方项目。")
@@ -86,20 +90,22 @@ struct RiskAssessment: Equatable, Sendable {
 
         switch item.runtime.state {
         case .running:
-            reasons.append("项目当前正在运行，评级已考虑其活动状态。")
+            reasons.append("项目当前正在运行；运行状态本身不说明是否异常。")
         case .loaded:
             reasons.append("项目当前已加载但未报告运行进程。")
         case .disabled:
-            reasons.append("项目当前已停用；评级仍保留配置本身的持久化风险。")
+            reasons.append("项目当前已停用；已有核查线索仍保留，供恢复前确认。")
         case .notLoaded:
-            reasons.append("项目当前未加载；评级主要反映配置在下次触发时的风险。")
+            reasons.append("项目当前未加载，不代表配置已被移除。")
         case .unknown:
-            reasons.append("当前无法确认运行状态，未据此降低评级。")
+            reasons.append("当前无法确认运行状态，不推断其正在运行或已经停止。")
         }
 
         if reasons.isEmpty {
             reasons.append(item.isAppleItem ? "系统位置与 Apple 身份判断未发现异常。" : "未发现缺失目标、异常签名或高权限持久化特征。")
         }
-        return RiskAssessment(level: level, reasons: reasons)
+        if item.targetExists == nil { reasons.append("执行目标尚未核实；不会将未知状态判为目标缺失。") }
+        return RiskAssessment(level: level, reasons: reasons,
+                              hasUnknownEvidence: item.targetExists == nil || item.signature.kind == .unavailable)
     }
 }

@@ -5,15 +5,22 @@ struct StartupFindingsView: View {
     @FocusState private var focusedFindingID: String?
 
     var body: some View {
-        Group {
-            if store.findings.isEmpty {
+        VStack(alignment: .leading, spacing: UIConstants.regularSpacing) {
+            VStack(alignment: .leading, spacing: UIConstants.compactSpacing) {
+                Text("先核查线索，再决定是否处理").font(.headline)
+                Text("\(store.count(for: .findings)) 条待核实 · \(store.findings.count - store.count(for: .findings)) 条关联与系统参考；不是故障数量。")
+                    .font(.callout).foregroundStyle(.secondary)
+                Toggle("包括多来源关联与系统参考", isOn: $store.includeReferenceFindings)
+                    .accessibilityIdentifier("findings.references")
+            }.padding(12)
+            if store.visibleFindings.isEmpty {
                 ContentUnavailableView(
-                    "没有发现冲突或残留",
+                    "没有匹配的待核实线索",
                     systemImage: "checkmark.circle",
-                    description: Text("当前启动来源之间没有明显重复，且已知执行目标均存在。")
+                    description: Text("可以清除搜索或展开关联记录。未知或未扫描的数据不代表已确认正常。")
                 )
             } else {
-                List(store.findings) { finding in
+                List(store.visibleFindings) { finding in
                     Button {
                         store.selectFinding(finding)
                     } label: {
@@ -24,13 +31,13 @@ struct StartupFindingsView: View {
                                 .frame(width: 24)
 
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(finding.kind.title)
+                                Text(finding.category.title + " · " + finding.kind.title)
                                     .font(.headline)
                                 Text(finding.title)
                                     .font(.callout.bold())
                                     .lineLimit(1)
                                 Text(finding.explanation)
-                                    .font(.caption)
+                                    .font(.callout)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
                                 Text(itemCountText(finding))
@@ -60,15 +67,20 @@ struct StartupFindingsView: View {
                     .accessibilityIdentifier("finding.\(finding.id)")
                 }
                 .listStyle(.inset)
-                .navigationTitle("冲突与残留")
-                .navigationSubtitle("\(store.findings.count) 条发现")
             }
         }
+        .navigationTitle("发现与关联")
+        .navigationSubtitle("\(store.visibleFindings.count) 条记录")
         .frame(minWidth: UIConstants.listMinimumWidth)
         .navigationSplitViewColumnWidth(min: 400, ideal: 470, max: 620)
         .task(id: store.listFocusRequest) {
             await Task.yield()
-            focusedFindingID = store.selectedFindingID ?? store.findings.first?.id
+            focusedFindingID = store.visibleFindings.first?.id
+        }
+        .onChange(of: store.visibleFindings.map(\.id)) { _, ids in
+            if !ids.contains(store.selectedFindingID ?? "") {
+                store.selectedFindingID = ids.first
+            }
         }
         .onChange(of: focusedFindingID) { _, findingID in
             guard let findingID,

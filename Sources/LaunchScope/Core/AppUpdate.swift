@@ -32,6 +32,16 @@ struct AppRelease: Equatable, Sendable {
     let version: String
     let title: String
     let pageURL: URL
+    let downloadURL: URL
+    let checksumURL: URL?
+
+    init(version: String, title: String, pageURL: URL, downloadURL: URL? = nil, checksumURL: URL? = nil) {
+        self.version = version
+        self.title = title
+        self.pageURL = pageURL
+        self.downloadURL = downloadURL ?? pageURL
+        self.checksumURL = checksumURL
+    }
 }
 
 enum AppUpdateError: LocalizedError, Equatable {
@@ -77,11 +87,23 @@ struct GitHubAppUpdateChecker: AppUpdateChecking {
             let tagName: String
             let name: String?
             let htmlURL: URL
+            let assets: [Asset]
+
+            struct Asset: Decodable {
+                let name: String
+                let browserDownloadURL: URL
+
+                enum CodingKeys: String, CodingKey {
+                    case name
+                    case browserDownloadURL = "browser_download_url"
+                }
+            }
 
             enum CodingKeys: String, CodingKey {
                 case tagName = "tag_name"
                 case name
                 case htmlURL = "html_url"
+                case assets
             }
         }
 
@@ -95,11 +117,16 @@ struct GitHubAppUpdateChecker: AppUpdateChecking {
             throw AppUpdateError.invalidRelease
         }
         let version = String(payload.tagName.trimmingPrefix("v"))
+        guard let dmg = payload.assets.first(where: { $0.name == "LaunchScope-\(version).dmg" }) else {
+            throw AppUpdateError.invalidRelease
+        }
         return AppRelease(
             version: version,
             title: payload.name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
                 ?? "LaunchScope \(version)",
-            pageURL: payload.htmlURL
+            pageURL: payload.htmlURL,
+            downloadURL: dmg.browserDownloadURL,
+            checksumURL: payload.assets.first(where: { $0.name == "LaunchScope-\(version).dmg.sha256" })?.browserDownloadURL
         )
     }
 }

@@ -14,15 +14,26 @@ struct StartupItemDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: UIConstants.sectionSpacing) {
                         header(item)
-                        identitySection(item)
-                        riskSection(item)
+                        if [.backgroundTask, .loginItem].contains(item.source) {
+                            VStack(alignment: .leading, spacing: UIConstants.compactSpacing) {
+                                Label("后台记录时效", systemImage: "clock").font(.headline)
+                                Text(store.backgroundTaskFreshness).font(.callout)
+                                Button("更新后台记录…") { store.refreshBackgroundTasks() }
+                                    .disabled(store.isScanning)
+                                    .help("macOS 会要求管理员授权")
+                            }
+                            .padding(12).background(LaunchScopePalette.secondaryFill)
+                        }
                         runtimeSection(item)
-                        resourceSection(item)
-                        annotationSection(item)
+                        componentSection(item)
                         actionSection(item)
+                        riskSection(item)
+                        identitySection(item)
+                        if item.runtime.processIdentifier != nil { resourceSection(item) }
+                        annotationSection(item)
                         launchSection(item)
                         signatureSection(item)
-                        configurationSection(item)
+                        DisclosureGroup("查看原始配置") { configurationSection(item) }
                         notesSection(item)
                     }
                     .padding(20)
@@ -83,7 +94,7 @@ struct StartupItemDetailView: View {
         return DetailSection(title: "用户标记", systemImage: "tag") {
             HStack {
                 Label(
-                    annotation?.isTrusted == true ? "已加入信任名单" : "未信任",
+                    annotation?.isTrusted == true ? "已确认信任" : "尚未确认 · 不代表可疑",
                     systemImage: annotation?.isTrusted == true ? "checkmark.shield.fill" : "shield.lefthalf.filled"
                 )
                 Spacer()
@@ -108,7 +119,18 @@ struct StartupItemDetailView: View {
                 Text(guidance.title).font(.callout.bold())
                 Text(guidance.summary).font(.callout).foregroundStyle(.secondary)
 
-                HStack(spacing: UIConstants.regularSpacing) {
+                actionButtons(item, guidance: guidance).buttonStyle(.bordered)
+
+                if store.controllingItemID == item.id {
+                    ProgressView("正在执行操作并重新扫描…").controlSize(.small)
+                }
+            }
+        }
+    }
+
+    private func actionButtons(_ item: StartupItem, guidance: StartupItemGuidance) -> some View {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), alignment: .leading)],
+                          alignment: .leading, spacing: UIConstants.regularSpacing) {
                     if let action = store.availableControlAction(for: item) {
                         Button(action.title, role: action.isDestructive ? .destructive : nil) {
                             pendingControlAction = action
@@ -131,14 +153,6 @@ struct StartupItemDetailView: View {
                         Button("复制只读诊断命令") { copy(command) }
                     }
                 }
-                .buttonStyle(.bordered)
-
-                if store.controllingItemID == item.id {
-                    ProgressView("正在执行操作并重新扫描…")
-                        .controlSize(.small)
-                }
-            }
-        }
     }
 
     private var confirmationTitle: String {
@@ -165,6 +179,8 @@ struct StartupItemDetailView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.title2.bold()).textSelection(.enabled)
                 Text(item.label).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                Text(store.riskAssessment(for: item).title)
+                    .font(.headline)
             }
             Spacer()
         }
@@ -182,16 +198,38 @@ struct StartupItemDetailView: View {
         }
     }
 
+    private func componentSection(_ item: StartupItem) -> some View {
+        let related = store.items.filter { $0.groupName == item.groupName }
+        guard related.count > 1 else { return AnyView(EmptyView()) }
+        return AnyView(DetailSection(title: "同一应用的其他组件", systemImage: "square.stack.3d.up") {
+            Text("这些项目都归属于 \(item.ownerName)。每个组件负责的功能不同，是否需要取决于你是否使用该功能。")
+                .font(.callout).foregroundStyle(.secondary)
+            ForEach(related) { component in
+                HStack(alignment: .top, spacing: UIConstants.regularSpacing) {
+                    Image(systemName: component.id == item.id ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(component.id == item.id ? LaunchScopePalette.accent : .secondary)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(component.displayName).font(.callout.bold())
+                        Text("\(component.componentRole) · \(component.source.compactTitle) · \(component.statusTitle)")
+                            .font(.callout).foregroundStyle(.secondary)
+                        Text(component.componentNeedHint).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+            }
+        })
+    }
+
     private func riskSection(_ item: StartupItem) -> some View {
         let assessment = store.riskAssessment(for: item)
-        return DetailSection(title: "风险解释", systemImage: assessment.level.systemImage) {
-            DetailRow(label: "结论", value: assessment.level.title)
+        return DetailSection(title: "判断依据", systemImage: assessment.systemImage) {
+            DetailRow(label: "结论", value: assessment.title)
             ForEach(Array(assessment.reasons.enumerated()), id: \.offset) { _, reason in
                 Label(reason, systemImage: "circle.fill")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-            Text("评级只用于排序与审计提示，不会自动停用项目。")
+            Text("此结论用于安排核查顺序，不是恶意软件判定；正常启动条件与未知信息不会单独提升等级。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -200,11 +238,12 @@ struct StartupItemDetailView: View {
     private func runtimeSection(_ item: StartupItem) -> some View {
         DetailSection(title: "当前状态", systemImage: "waveform.path.ecg") {
             DetailRow(label: item.statusLabel, value: item.statusTitle)
+            DetailRow(label: "加载状态", value: item.runtime.state.title)
             DetailRow(label: "加载域", value: item.runtime.domain)
             DetailRow(label: "PID", value: item.runtime.processIdentifier.map(String.init))
             DetailRow(label: "上次退出码", value: item.runtime.lastExitCode.map(String.init))
-            DetailRow(label: "配置启用", value: item.isEnabled.map { $0 ? "是" : "否" })
-            DetailRow(label: "执行目标存在", value: item.targetExists.map { $0 ? "是" : "否" })
+            DetailRow(label: "配置启用", value: item.isEnabled.map { $0 ? "是" : "否" } ?? "未知")
+            DetailRow(label: "执行目标存在", value: item.targetExists.map { $0 ? "是" : "否" } ?? "未知 · 尚未核实")
         }
     }
 

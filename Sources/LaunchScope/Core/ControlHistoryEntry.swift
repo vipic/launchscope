@@ -39,7 +39,7 @@ struct ControlHistoryEntry: Identifiable, Codable, Equatable, Sendable {
         self.timestamp = timestamp
         itemID = item.controlHistoryKey
         label = item.label
-        displayName = item.displayName
+        displayName = item.source == .shellConfiguration ? "Shell 配置行" : item.source == .cron ? "Cron 任务" : item.displayName
         source = item.source
         self.action = action
         outcome = result.outcome
@@ -51,6 +51,19 @@ struct ControlHistoryEntry: Identifiable, Codable, Equatable, Sendable {
 
     var inverseAction: StartupItemControlAction? {
         outcome == .failure || reversedAt != nil ? nil : action.inverse
+    }
+
+    var safeDisplayName: String {
+        source == .shellConfiguration ? "Shell 配置行 · \(label)" : source == .cron ? "Cron 任务 · \(label)" : displayName
+    }
+
+    var resultTitle: String {
+        if reversedAt != nil { return "已撤销" }
+        switch outcome {
+        case .success: return "成功"
+        case .partial: return "部分完成 · 需复查"
+        case .failure: return "失败"
+        }
     }
 }
 

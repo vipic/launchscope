@@ -33,7 +33,7 @@ struct SettingsView: View {
 
             Form {
                 Section("新增项目提醒") {
-                    Toggle("提醒新增的第三方未信任项目", isOn: Binding(
+                    Toggle("提醒新增且尚未确认的第三方项目", isOn: Binding(
                         get: { dashboardStore.notificationsEnabled },
                         set: { dashboardStore.setNotificationsEnabled($0) }
                     ))
@@ -63,17 +63,17 @@ struct SettingsView: View {
                     updateStatus
                     HStack {
                         Button("检查更新") { updateStore.checkForUpdates() }
-                            .disabled(updateStore.state == .checking)
+                            .disabled(updateStore.state == .checking || isInstalling)
                             .accessibilityIdentifier("settings.check-for-updates")
                         if case let .updateAvailable(release) = updateStore.state {
-                            Link("打开下载页", destination: release.pageURL)
+                            Button("立即更新") { updateStore.installUpdate(release) }
                                 .buttonStyle(.borderedProminent)
-                                .accessibilityIdentifier("settings.open-update-page")
+                                .accessibilityIdentifier("settings.install-update")
                         }
                     }
                 }
                 Section {
-                    Text("LaunchScope 只检查 GitHub 上的最新正式版本，不会静默下载或替换应用。下载后请核对 DMG 附带的 SHA-256 文件。")
+                    Text("LaunchScope 会从 GitHub 下载正式 DMG，校验版本、签名和 SHA-256 后自动替换当前应用并重启。整个过程需要你主动点击“立即更新”。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -113,6 +113,11 @@ struct SettingsView: View {
                 ProgressView().controlSize(.small)
                 Text("正在检查更新…")
             }
+        case .installing:
+            HStack {
+                ProgressView().controlSize(.small)
+                Text("正在下载并安装 (release.version)…")
+            }
         case .upToDate:
             Label("当前已是最新版本", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(LaunchScopePalette.healthy)
@@ -123,6 +128,11 @@ struct SettingsView: View {
             Label("检查失败：\(message)", systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(LaunchScopePalette.warning)
         }
+    }
+
+    private var isInstalling: Bool {
+        if case .installing = updateStore.state { return true }
+        return false
     }
 
     private var versionDescription: String {

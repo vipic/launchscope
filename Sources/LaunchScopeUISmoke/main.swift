@@ -27,6 +27,7 @@ guard let application else {
 }
 
 let root = AXUIElementCreateApplication(application.processIdentifier)
+application.activate(options: [.activateAllWindows])
 if arguments.contains("--release-smoke") {
     runReleaseSmoke(application: application, root: root)
 } else if arguments.contains("--release-acceptance") {
@@ -41,7 +42,18 @@ if arguments.contains("--release-smoke") {
         fputs("UI 冒烟未找到控件：\(missing.joined(separator: "、"))\n", stderr)
         exit(1)
     }
-    press(discovered["sidebar.all"]!, description: "全部项目筛选")
+    // 先等扫描结果挂载，再对前台窗口验收键盘焦点，避免把后台加载态当成列表。
+    let scanDeadline = Date().addingTimeInterval(30)
+    while Date() < scanDeadline {
+        let refresh = waitForIdentifier("toolbar.refresh", root: root, timeout: 2)
+        if boolAttribute(kAXEnabledAttribute, of: refresh) == true,
+           stringAttribute(kAXRoleAttribute, of: refresh) == kAXButtonRole { break }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+    }
+    application.activate(options: [])
+    AXUIElementSetAttributeValue(root, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+    RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+    press(waitForIdentifier("sidebar.all", root: root, timeout: 5), description: "全部项目筛选")
     let focusedIdentifier = waitForFocusedIdentifier(root: root, prefix: "startup-item.", timeout: 10)
     print("UI 冒烟通过：主导航、筛选后列表焦点、刷新与审计时间线控件均可访问（\(focusedIdentifier)）。")
 }
@@ -62,7 +74,7 @@ private func waitForFocusedIdentifier(
         }
         RunLoop.current.run(until: Date().addingTimeInterval(0.2))
     } while Date() < deadline
-    fputs("筛选后焦点未进入启动项列表。\n", stderr)
+    fputs("筛选后焦点未进入启动项列表（应用前台：\(application.isActive)）。\n", stderr)
     exit(1)
 }
 

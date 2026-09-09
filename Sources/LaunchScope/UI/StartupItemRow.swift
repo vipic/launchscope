@@ -23,22 +23,21 @@ struct StartupItemRow: View {
                     }
                 }
 
-                Text(secondaryText)
-                    .font(.caption)
+                Text(item.source.compactTitle + " · " + secondaryText)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .textSelection(.enabled)
 
                 HStack(spacing: 6) {
+                    StatusBadge(title: item.componentRole, systemImage: "puzzlepiece.extension")
                     if isNew && !isTrusted {
-                        StatusBadge(title: "新增未信任", systemImage: "sparkles", color: LaunchScopePalette.warning)
+                        StatusBadge(title: "新增", systemImage: "sparkles", color: LaunchScopePalette.warning)
                     } else if isTrusted {
                         StatusBadge(title: "已信任", systemImage: "checkmark.shield", color: LaunchScopePalette.healthy)
                     }
-                    StatusBadge(title: item.source.compactTitle, systemImage: item.source.systemImage)
                     riskBadge
                     runtimeBadge
-                    signatureBadge
                 }
                 .lineLimit(1)
             }
@@ -50,19 +49,19 @@ struct StartupItemRow: View {
         .background(isSelected ? LaunchScopePalette.selectedFill : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: UIConstants.cornerRadius, style: .continuous))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(item.displayName)，\(item.source.title)，\(riskAssessment.level.title)，\(item.statusTitle)，签名 \(item.signature.kind.title)")
+        .accessibilityLabel("\(item.displayName)，\(item.source.title)，\(riskAssessment.title)，\(item.statusTitle)，签名 \(item.signature.kind.title)")
         .accessibilityHint("打开项目详情")
     }
 
     private var riskBadge: some View {
         let color: Color = switch riskAssessment.level {
-        case .low: LaunchScopePalette.healthy
+        case .low: .secondary
         case .medium: LaunchScopePalette.warning
         case .high: .red
         }
         return StatusBadge(
-            title: riskAssessment.level.title,
-            systemImage: riskAssessment.level.systemImage,
+            title: riskAssessment.title,
+            systemImage: riskAssessment.systemImage,
             color: color
         )
         .help(riskAssessment.reasons.joined(separator: "\n"))
@@ -99,12 +98,4 @@ struct StartupItemRow: View {
         }
     }
 
-    private var signatureBadge: some View {
-        let color: Color = switch item.signature.kind {
-        case .apple, .developerID, .appStore: LaunchScopePalette.healthy
-        case .unsigned, .invalid: LaunchScopePalette.warning
-        case .adHoc, .unavailable: .secondary
-        }
-        return StatusBadge(title: item.signature.kind.title, systemImage: "checkmark.seal", color: color)
-    }
 }

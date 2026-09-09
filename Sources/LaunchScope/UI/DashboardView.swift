@@ -19,7 +19,9 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationSplitView {
-            SidebarView(store: store)
+            SidebarView(store: store, showChanges: { showScanChanges = true },
+                        showTimeline: { showAuditTimeline = true }, showRecovery: { showRecoveryCenter = true },
+                        showExport: { showAuditExport = true })
         } content: {
             if store.selectedFilter == .issues {
                 IssuesView(store: store)
@@ -102,7 +104,7 @@ struct DashboardView: View {
                     Toggle("隐藏 Apple 项目", isOn: $hideAppleItems)
                     Toggle("隐藏已信任项目", isOn: $hideTrustedItems)
                     Toggle("显示敏感配置值", isOn: $showSensitiveValues)
-                    Toggle("新增未信任项目提醒", isOn: Binding(
+                    Toggle("新增尚未确认项目提醒", isOn: Binding(
                         get: { store.notificationsEnabled },
                         set: { store.setNotificationsEnabled($0) }
                     ))

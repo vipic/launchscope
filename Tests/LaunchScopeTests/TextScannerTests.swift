@@ -2,6 +2,55 @@ import XCTest
 @testable import LaunchScope
 
 final class TextScannerTests: XCTestCase {
+    func testBackgroundRelativeURLResolvesAgainstParentAndDecodesSpaces() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let parent = directory.appendingPathComponent("Example.app")
+        let child = parent.appendingPathComponent("Contents/Library/LoginItems/Browser Helper.app")
+        try FileManager.default.createDirectory(at: child, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let items = BackgroundTaskScanner.parse("""
+        Identifier: parent
+        URL: \(parent.absoluteString)
+        Name: Example
+
+        Identifier: child
+        Parent Identifier: parent
+        URL: Contents/Library/LoginItems/Browser%20Helper.app
+        Type: login item
+        """)
+        let item = try XCTUnwrap(items.first { $0.label == "child" })
+        XCTAssertEqual(item.executablePath, child.path)
+        XCTAssertEqual(item.targetExists, true)
+        XCTAssertEqual(item.attribution?.bundlePath, parent.path)
+    }
+
+    func testUnresolvedAndEscapingBackgroundPathsRemainUnknown() {
+        for url in ["Contents/Helper.app", "../Outside.app", "https://example.com/app"] {
+            let item = BackgroundTaskScanner.parse("""
+            Identifier: com.apple.impostor
+            URL: \(url)
+            """).first
+            XCTAssertNil(item?.targetExists)
+            XCTAssertNil(item?.executablePath)
+            XCTAssertEqual(item?.isAppleItem, false)
+        }
+        XCTAssertNil(PathAccessPolicy.targetExistsWithoutPrompt(at: "relative/path"))
+    }
+
+    func testBackgroundParentCycleDoesNotResolveOrProbe() {
+        let items = BackgroundTaskScanner.parse("""
+        Identifier: first
+        Parent Identifier: second
+        URL: Contents/First.app
+
+        Identifier: second
+        Parent Identifier: first
+        URL: Contents/Second.app
+        """)
+        XCTAssertEqual(items.count, 2)
+        XCTAssertTrue(items.allSatisfy { $0.executablePath == nil && $0.targetExists == nil })
+    }
+
     func testCronParserSkipsCommentsAndKeepsCommand() throws {
         let items = CronScanner.parse("""
         # sync every morning

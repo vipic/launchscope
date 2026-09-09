@@ -17,7 +17,18 @@ struct BackgroundTaskCache: Sendable {
         let data = try Data(contentsOf: url)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(BackgroundTaskSnapshot.self, from: data)
+        var snapshot = try decoder.decode(BackgroundTaskSnapshot.self, from: data)
+        // 缓存保存的是历史注册信息；每次加载都按当前解析规则核实路径，
+        // 不沿用旧版存下的“目标缺失”，也不改变注册记录的更新时间。
+        let reparsed = BackgroundTaskScanner.parseRecords(snapshot.items.map(\.configuration))
+        let byID = Dictionary(reparsed.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        snapshot.items = snapshot.items.map { original in
+            if let normalized = byID[original.id] { return normalized }
+            var item = original
+            item.targetExists = PathAccessPolicy.targetExistsWithoutPrompt(at: item.executablePath)
+            return item
+        }
+        return snapshot
     }
 
     @discardableResult
@@ -65,8 +76,12 @@ struct BackgroundTaskProvider: Sendable {
                     )], Date())
                 }
             }
-            let cached = try? cache.load()
-            return (cached?.items ?? [], result.issues, cached?.updatedAt)
+            do {
+                let cached = try cache.load()
+                return (cached?.items ?? [], result.issues, cached?.updatedAt)
+            } catch {
+                return ([], result.issues + [ScanIssue(source: "后台任务缓存", message: "更新失败且无法读取历史缓存：\(error.localizedDescription)", severity: .warning)], nil)
+            }
         }
 
         do {

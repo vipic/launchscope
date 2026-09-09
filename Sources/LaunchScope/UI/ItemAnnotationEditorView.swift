@@ -21,6 +21,8 @@ struct ItemAnnotationEditorView: View {
             Text("备注与信任名单").font(.title2.bold())
             Text(item.displayName).foregroundStyle(.secondary)
             Toggle("信任此项目", isOn: $isTrusted)
+            Text("这是你的审阅标记，不会验证软件安全性，也不会改变系统权限。")
+                .font(.callout).foregroundStyle(.secondary)
             TextField("标签（使用逗号分隔）", text: $tagsText)
             TextEditor(text: $note).frame(minHeight: 130).overlay {
                 RoundedRectangle(cornerRadius: UIConstants.compactSpacing).stroke(.separator)

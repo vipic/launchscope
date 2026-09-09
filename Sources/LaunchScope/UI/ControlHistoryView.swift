@@ -3,6 +3,7 @@ import SwiftUI
 struct ControlHistoryView: View {
     @ObservedObject var store: DashboardStore
     @Environment(\.dismiss) private var dismiss
+    @State private var pendingUndo: ControlHistoryEntry?
 
     var body: some View {
         NavigationStack {
@@ -37,6 +38,16 @@ struct ControlHistoryView: View {
             }
         }
         .frame(minWidth: 680, minHeight: 460)
+        .confirmationDialog("确认撤销操作", isPresented: Binding(
+            get: { pendingUndo != nil }, set: { if !$0 { pendingUndo = nil } }
+        ), titleVisibility: .visible) {
+            if let entry = pendingUndo {
+                Button("执行反向操作") { pendingUndo = nil; store.undo(entry) }
+                Button("取消", role: .cancel) { pendingUndo = nil }
+            }
+        } message: {
+            Text("\(pendingUndo?.safeDisplayName ?? "")\n\(pendingUndo?.inverseAction?.confirmationMessage ?? "")")
+        }
     }
 
     private func historyRow(_ entry: ControlHistoryEntry) -> some View {
@@ -48,7 +59,7 @@ struct ControlHistoryView: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 8) {
-                    Text(entry.displayName).font(.headline)
+                    Text(entry.safeDisplayName).font(.headline)
                     Text(entry.action.title).font(.callout.bold())
                     if entry.reversedAt != nil {
                         Text("已撤销")
@@ -56,18 +67,18 @@ struct ControlHistoryView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                Text(entry.label).font(.caption).foregroundStyle(.secondary)
+                Text("\(entry.source.title) · \(entry.label) · \(entry.resultTitle)").font(.callout).foregroundStyle(.secondary)
                 Text(stateDescription(entry)).font(.callout)
                 Text(entry.message).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 Text(entry.timestamp, format: .dateTime.year().month().day().hour().minute().second())
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: 12)
 
             if entry.inverseAction != nil {
-                Button("撤销") { store.undo(entry) }
+                Button("撤销") { pendingUndo = entry }
                     .disabled(!store.canUndo(entry))
                     .help(store.canUndo(entry) ? "执行反向操作并重新扫描" : "当前状态不允许安全撤销")
             }

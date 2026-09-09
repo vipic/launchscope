@@ -37,9 +37,9 @@ enum DashboardFilter: Hashable, Identifiable {
         case .running: "正在运行"
         case .missingTarget: "目标已缺失"
         case .disabled: "已停用"
-        case .untrusted: "未信任项目"
-        case .highRisk: "需要关注"
-        case .findings: "冲突与残留"
+        case .untrusted: "尚未确认"
+        case .highRisk: "待核查项目"
+        case .findings: "发现与关联"
         case .issues: "扫描提示"
         case .source(let source): source.title
         }

@@ -4,6 +4,16 @@ struct StartupItemGroup: Identifiable {
     var name: String
     var items: [StartupItem]
     var id: String { name }
+    var enabledCount: Int { items.count { $0.isEnabled != false && $0.runtime.state != .disabled } }
+    var roleSummary: String {
+        let roles = items.map(\.componentRole)
+        var counts: [String: Int] = [:]
+        roles.forEach { counts[$0, default: 0] += 1 }
+        return counts
+            .sorted { $0.value == $1.value ? $0.key.localizedStandardCompare($1.key) == .orderedAscending : $0.value > $1.value }
+            .map { $0.value > 1 ? "\($0.key) ×\($0.value)" : $0.key }
+            .joined(separator: "、")
+    }
 }
 
 enum StartupItemListData {

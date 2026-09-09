@@ -2,6 +2,10 @@ import SwiftUI
 
 struct SidebarView: View {
     @ObservedObject var store: DashboardStore
+    var showChanges: () -> Void
+    var showTimeline: () -> Void
+    var showRecovery: () -> Void
+    var showExport: () -> Void
 
     private let overviewFilters: [DashboardFilter] = [
         .all, .thirdParty, .untrusted, .highRisk, .findings, .apple, .running, .missingTarget, .disabled, .issues,
@@ -14,6 +18,13 @@ struct SidebarView: View {
                     sidebarButton(filter)
                 }
             }
+
+            Section("审计工具") {
+                Button(action: showChanges) { Label("扫描变化（\(store.scanChanges.count)）", systemImage: "arrow.triangle.2.circlepath") }
+                Button(action: showTimeline) { Label("审计时间线", systemImage: "clock") }
+                Button(action: showRecovery) { Label("恢复中心", systemImage: "lifepreserver") }
+                Button(action: showExport) { Label("导出报告", systemImage: "square.and.arrow.up") }
+            }.buttonStyle(.plain)
 
             Section("来源") {
                 ForEach(StartupSource.allCases) { source in
@@ -39,11 +50,11 @@ struct SidebarView: View {
 
             Section("系统后台项目") {
                 if let updatedAt = store.backgroundTasksUpdatedAt {
-                    LabeledContent("缓存更新") {
+                    LabeledContent("后台记录时间") {
                         Text(updatedAt, format: .dateTime.month().day().hour().minute())
                     }
                 } else {
-                    Text("尚未读取；点击工具栏按钮并授权后显示")
+                    Text("尚未读取；更新后台记录需授权")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -59,7 +70,7 @@ struct SidebarView: View {
             store.selectFilter(filter)
         } label: {
             HStack {
-                Label(filter.title, systemImage: filter.systemImage)
+                Label(filter.title, systemImage: filter.systemImage).lineLimit(2)
                 Spacer()
                 Text(store.count(for: filter), format: .number)
                     .foregroundStyle(.secondary)

@@ -19,16 +19,16 @@ final class RiskAssessmentTests: XCTestCase {
 
         XCTAssertEqual(assessment.level, .low)
         XCTAssertTrue(assessment.reasons.contains { $0.contains("正在运行") })
-        XCTAssertEqual(RiskLevel.medium.title, "中风险")
+        XCTAssertEqual(RiskLevel.medium.title, "待核实")
     }
 
-    func testMissingTargetIsHighRiskWithResidualExplanation() {
+    func testMissingTargetNeedsReviewWithoutSecurityAccusation() {
         let item = StartupItem(
             id: "missing", label: "com.example.missing", source: .userLaunchAgent,
             signature: SignatureInfo(kind: .developerID), targetExists: false
         )
         let assessment = RiskAssessment.assess(item)
-        XCTAssertEqual(assessment.level, .high)
+        XCTAssertEqual(assessment.level, .medium)
         XCTAssertTrue(assessment.reasons.contains { $0.contains("残留") })
     }
 
@@ -61,5 +61,14 @@ final class RiskAssessmentTests: XCTestCase {
         let assessment = RiskAssessment.assess(item)
         XCTAssertEqual(assessment.level, .low)
         XCTAssertTrue(assessment.reasons.contains { $0.contains("Apple") })
+    }
+
+    func testNormalPersistenceAndUnknownSignatureDoNotRaiseRisk() {
+        let item = StartupItem(id: "normal", label: "normal", source: .userLaunchAgent,
+                               runAtLoad: true, keepAliveDescription: "true")
+        let assessment = RiskAssessment.assess(item)
+        XCTAssertEqual(assessment.level, .low)
+        XCTAssertEqual(assessment.title, "信息不足")
+        XCTAssertFalse(assessment.level.requiresAttention)
     }
 }

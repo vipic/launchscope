@@ -3,6 +3,26 @@ import XCTest
 @testable import LaunchScope
 
 final class BackgroundTaskCacheTests: XCTestCase {
+    func testLegacyCacheReparsesRelativePathsWithoutChangingIdentityOrTimestamp() throws {
+        let cache = makeCache()
+        let app = cache.url.deletingLastPathComponent().appendingPathComponent("Example.app")
+        let target = app.appendingPathComponent("Contents/Helper App.app")
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        let parent = StartupItem(id: "btm:PARENT:\(app.path)", label: "parent", source: .backgroundTask,
+                                 configuration: ["UUID": "PARENT", "Identifier": "parent", "URL": app.absoluteString])
+        let child = StartupItem(id: "btm:CHILD:Contents/Helper%20App.app", label: "child", source: .loginItem,
+                                executablePath: "Contents/Helper%20App.app",
+                                configuration: ["UUID": "CHILD", "Identifier": "child", "Parent Identifier": "parent",
+                                                "URL": "Contents/Helper%20App.app", "Type": "login item"], targetExists: false)
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        try cache.save(items: [parent, child], updatedAt: date)
+        let loaded = try XCTUnwrap(cache.load())
+        XCTAssertEqual(loaded.updatedAt, date)
+        XCTAssertEqual(loaded.items[1].id, child.id)
+        XCTAssertEqual(loaded.items[1].executablePath, target.path)
+        XCTAssertEqual(loaded.items[1].targetExists, true)
+    }
+
     func testNormalLoadUsesCacheWithoutRunningSFLTool() throws {
         let cache = makeCache()
         let cachedItem = StartupItem(

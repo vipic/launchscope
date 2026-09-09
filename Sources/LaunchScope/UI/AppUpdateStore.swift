@@ -1,10 +1,12 @@
 import Foundation
+import AppKit
 
 @MainActor
 final class AppUpdateStore: ObservableObject {
     enum State: Equatable {
         case idle
         case checking
+        case installing(AppRelease)
         case upToDate
         case updateAvailable(AppRelease)
         case failed(String)
@@ -66,6 +68,20 @@ final class AppUpdateStore: ObservableObject {
                 state = installed < latest ? .updateAvailable(release) : .upToDate
             } catch {
                 state = isAutomatic ? .idle : .failed(error.localizedDescription)
+            }
+        }
+    }
+
+    func installUpdate(_ release: AppRelease) {
+        guard case .updateAvailable = state else { return }
+        state = .installing(release)
+        Task {
+            do {
+                try await AppUpdater().downloadAndInstall(release: release)
+                // 安装脚本会等待当前进程退出后替换并重新打开应用。
+                NSApp.terminate(nil)
+            } catch {
+                state = .failed(error.localizedDescription)
             }
         }
     }

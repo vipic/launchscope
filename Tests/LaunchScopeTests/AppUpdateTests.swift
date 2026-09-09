@@ -14,13 +14,14 @@ final class AppUpdateTests: XCTestCase {
     }
 
     func testGitHubReleaseDecoderAcceptsOfficialReleasePage() throws {
-        let data = Data(#"{"tag_name":"v0.2.0","name":"安全更新","html_url":"https://github.com/vipic/launchscope/releases/tag/v0.2.0"}"#.utf8)
+        let data = Data(#"{"tag_name":"v0.2.0","name":"安全更新","html_url":"https://github.com/vipic/launchscope/releases/tag/v0.2.0","assets":[{"name":"LaunchScope-0.2.0.dmg","browser_download_url":"https://github.com/vipic/launchscope/releases/download/v0.2.0/LaunchScope-0.2.0.dmg"},{"name":"LaunchScope-0.2.0.dmg.sha256","browser_download_url":"https://github.com/vipic/launchscope/releases/download/v0.2.0/LaunchScope-0.2.0.dmg.sha256"}]}"#.utf8)
 
         let release = try GitHubAppUpdateChecker.decodeRelease(from: data)
 
         XCTAssertEqual(release.version, "0.2.0")
         XCTAssertEqual(release.title, "安全更新")
         XCTAssertEqual(release.pageURL.host, "github.com")
+        XCTAssertEqual(release.downloadURL.pathExtension, "dmg")
     }
 
     func testGitHubReleaseDecoderRejectsUntrustedDownloadPage() {

@@ -6,6 +6,7 @@ import Foundation
 /// `fileExists`、Bundle 元数据或签名检查而主动读取用户的受保护内容目录。
 enum PathAccessPolicy {
     static func canProbeMetadata(at path: String, homeDirectory: String = NSHomeDirectory()) -> Bool {
+        guard path.hasPrefix("/") else { return false }
         let standardizedPath = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
             .standardizedFileURL.path
         let home = URL(fileURLWithPath: homeDirectory).standardizedFileURL.path

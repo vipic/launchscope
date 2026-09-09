@@ -10,8 +10,9 @@ struct StatusBadge: View {
             if let systemImage { Image(systemName: systemImage) }
             Text(title)
         }
-        .font(.caption)
-        .foregroundStyle(color)
+        .font(.callout)
+        .foregroundStyle(.primary)
+        .fixedSize(horizontal: true, vertical: false)
         .padding(.horizontal, 7)
         .padding(.vertical, 3)
         .background(color.opacity(0.10), in: Capsule())
