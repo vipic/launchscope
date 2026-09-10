@@ -47,8 +47,10 @@ struct StartupItemDetailView: View {
                     pendingControlAction = nil
                     store.performControl(action, on: item)
                 }
+                .help("确认执行\(action.title)并重新扫描")
                 .accessibilityIdentifier("confirmation.control")
                 Button("取消", role: .cancel) { pendingControlAction = nil }
+                    .help("保留当前状态，不执行操作")
             }
         } message: {
             Text(confirmationMessage)
@@ -110,7 +112,9 @@ struct StartupItemDetailView: View {
                     systemImage: annotation?.isTrusted == true ? "checkmark.shield.fill" : "shield.lefthalf.filled"
                 )
                 Spacer()
-                Button("编辑") { showAnnotationEditor = true }.buttonStyle(.bordered)
+                Button("编辑") { showAnnotationEditor = true }
+                    .buttonStyle(.bordered)
+                    .help("编辑此项目的信任标记、标签和备注")
             }
             if let tags = annotation?.tags, !tags.isEmpty {
                 DetailRow(label: "标签", value: tags.joined(separator: "、"))
@@ -148,21 +152,26 @@ struct StartupItemDetailView: View {
                             pendingControlAction = action
                         }
                         .disabled(store.controllingItemID != nil)
+                        .help("准备\(action.title)此项目，确认后执行")
                         .accessibilityIdentifier("control.\(action.rawValue)")
                     }
                     if guidance.opensLoginItemSettings {
                         Button("打开登录项设置") {
                             SMAppService.openSystemSettingsLoginItems()
                         }
+                        .help("打开 macOS 的登录项与扩展设置以管理此项目")
                     }
                     if let path = item.revealableSourcePath {
                         Button("显示配置") { reveal(path) }
+                            .help("在 Finder 中显示此项目的配置文件")
                     }
                     if let path = item.attribution?.bundlePath {
                         Button("显示所属应用") { reveal(path) }
+                            .help("在 Finder 中显示拥有此启动项的应用")
                     }
                     if let command = guidance.diagnosticCommand {
                         Button("复制只读诊断命令") { copy(command) }
+                            .help("将不会修改系统状态的诊断命令复制到剪贴板")
                     }
                 }
     }
@@ -235,6 +244,7 @@ struct StartupItemDetailView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .help("切换到 \(component.displayName) 的\(component.source.compactTitle)记录")
                 .accessibilityHint("切换到这条来源记录")
             }
         })

@@ -45,6 +45,7 @@ struct SidebarView: View {
                 Button(action: showRecovery) {
                     Label("操作记录与恢复", systemImage: "clock.arrow.circlepath")
                 }
+                .help("查看可恢复项目、可撤销操作和最近操作记录")
             }
             .buttonStyle(.plain)
 
@@ -92,6 +93,7 @@ struct SidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help("显示\(filter.title)分类中的启动项目")
         .listRowBackground(store.selectedFilter == filter ? LaunchScopePalette.selectedFill : Color.clear)
         .accessibilityIdentifier("sidebar.\(filter.id)")
     }

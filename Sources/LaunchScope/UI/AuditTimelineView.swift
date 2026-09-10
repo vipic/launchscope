@@ -40,7 +40,10 @@ struct AuditTimelineView: View {
                 }
             }
             .navigationTitle("审计时间线")
-            .toolbar { Button("完成") { dismiss() } }
+            .toolbar {
+                Button("完成") { dismiss() }
+                    .help("关闭审计时间线窗口")
+            }
         }
         .frame(minWidth: 720, minHeight: 520)
         .onAppear { newerIndex = max(store.snapshotHistory.count - 1, 0) }

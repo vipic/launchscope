@@ -50,6 +50,7 @@ struct ScanChangesView: View {
             .navigationTitle("扫描变化")
             .toolbar {
                 Button("完成") { dismiss() }
+                    .help("关闭扫描变化窗口")
             }
         }
         .frame(minWidth: 700, minHeight: 480)

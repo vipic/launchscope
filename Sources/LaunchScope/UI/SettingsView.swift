@@ -34,10 +34,12 @@ struct SettingsView: View {
                     HStack {
                         Button("检查更新") { updateStore.checkForUpdates() }
                             .disabled(updateStore.state == .checking || isUpdating)
+                            .help("从 GitHub 检查是否有新的 LaunchScope 正式版本")
                             .accessibilityIdentifier("settings.check-for-updates")
                         if case let .updateAvailable(release) = updateStore.state {
                             Button("立即更新") { updateStore.installUpdate(release) }
                                 .buttonStyle(.borderedProminent)
+                                .help("下载并校验 LaunchScope \(release.version)，随后自动安装并重启")
                                 .accessibilityIdentifier("settings.install-update")
                         }
                     }
@@ -66,6 +68,7 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Link("项目主页", destination: URL(string: "https://github.com/vipic/launchscope")!)
+                    .help("在浏览器中打开 LaunchScope 的 GitHub 项目主页")
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .tabItem { Label("关于", systemImage: "info.circle") }

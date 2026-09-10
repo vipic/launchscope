@@ -109,10 +109,12 @@ struct StartupFindingDetailView: View {
 
             HStack(spacing: UIConstants.regularSpacing) {
                 Button("查看完整详情") { store.showItem(item) }
+                    .help("打开此项目的启动原因、状态、参数和可用操作")
                 if let path = item.revealableSourcePath {
                     Button("显示配置") {
                         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
                     }
+                    .help("在 Finder 中显示此项目的配置文件")
                 }
             }
             .buttonStyle(.bordered)

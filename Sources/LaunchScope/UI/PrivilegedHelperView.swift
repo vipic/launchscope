@@ -19,14 +19,20 @@ struct PrivilegedHelperView: View {
                 HStack {
                     Button("注册辅助程序") { manager.register() }
                         .disabled(manager.status == .notFound)
+                        .help("向 macOS 注册用于控制系统级启动项的管理员辅助程序")
                     Button("打开系统批准设置") { manager.openApprovalSettings() }
+                        .help("打开 macOS 设置，以批准管理员辅助程序")
                     Button("验证安全连接") { manager.testConnection() }
                         .disabled(manager.status != .enabled)
+                        .help("测试 LaunchScope 能否安全连接管理员辅助程序")
                 }
             }
             .padding(20)
             .navigationTitle("管理员辅助程序")
-            .toolbar { Button("完成") { dismiss() } }
+            .toolbar {
+                Button("完成") { dismiss() }
+                    .help("关闭管理员辅助程序窗口")
+            }
         }
         .frame(width: 640, height: 330)
         .onAppear { manager.refreshStatus() }

@@ -35,6 +35,7 @@ struct ControlHistoryView: View {
             .navigationTitle("操作历史")
             .toolbar {
                 Button("完成") { dismiss() }
+                    .help("关闭操作历史窗口")
             }
         }
         .frame(minWidth: 680, minHeight: 460)
@@ -43,7 +44,9 @@ struct ControlHistoryView: View {
         ), titleVisibility: .visible) {
             if let entry = pendingUndo {
                 Button("执行反向操作") { pendingUndo = nil; store.undo(entry) }
+                    .help("执行与原操作相反的动作并重新扫描")
                 Button("取消", role: .cancel) { pendingUndo = nil }
+                    .help("保留当前状态，不执行撤销")
             }
         } message: {
             Text("\(pendingUndo?.safeDisplayName ?? "")\n\(pendingUndo?.inverseAction?.confirmationMessage ?? "")")

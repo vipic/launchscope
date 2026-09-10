@@ -32,11 +32,14 @@ struct ItemAnnotationEditorView: View {
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }
+                    .help("放弃本次编辑并关闭窗口")
                 Button("保存") {
                     let tags = tagsText.split(separator: ",").map(String.init)
                     onSave(note, tags, isTrusted)
                     dismiss()
-                }.buttonStyle(.borderedProminent)
+                }
+                .buttonStyle(.borderedProminent)
+                .help("保存此项目的信任标记、标签和备注")
             }
         }.padding(22).frame(width: 520)
     }

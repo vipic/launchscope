@@ -52,12 +52,16 @@ struct LaunchScopeApp: App {
             CommandMenu("筛选") {
                 Button("全部项目") { dashboardStore.selectFilter(.all) }
                     .keyboardShortcut("1", modifiers: .command)
+                    .help("显示所有扫描到的启动项目")
                 Button("第三方与自定义") { dashboardStore.selectFilter(.thirdParty) }
                     .keyboardShortcut("2", modifiers: .command)
+                    .help("显示非 Apple 的应用、服务和自定义启动配置")
                 Button("需要关注") { dashboardStore.selectFilter(.highRisk) }
                     .keyboardShortcut("3", modifiers: .command)
+                    .help("显示建议优先核查的启动项目")
                 Button("发现与关联") { dashboardStore.selectFilter(.findings) }
                     .keyboardShortcut("4", modifiers: .command)
+                    .help("显示重复、残留和多来源关联等核查线索")
             }
         }
 

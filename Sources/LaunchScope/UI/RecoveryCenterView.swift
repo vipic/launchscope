@@ -31,6 +31,7 @@ struct RecoveryCenterView: View {
                                 }
                                 Spacer()
                                 Button("撤销") { pendingUndo = entry }
+                                    .help("执行与这次操作相反的动作并重新扫描")
                             }
                         }
                     }
@@ -57,7 +58,10 @@ struct RecoveryCenterView: View {
                 }.font(.callout).padding(12)
             }
             .navigationTitle("操作记录与恢复")
-            .toolbar { Button("完成") { dismiss() } }
+            .toolbar {
+                Button("完成") { dismiss() }
+                    .help("关闭操作记录与恢复窗口")
+            }
         }
         .frame(minWidth: 720, minHeight: 520)
         .accessibilityIdentifier("recovery.center")
@@ -71,7 +75,9 @@ struct RecoveryCenterView: View {
                     self.pending = nil
                     store.performControl(pending.action, on: pending.item)
                 }
+                .help("确认执行\(pending.action.title)并重新扫描")
                 Button("取消", role: .cancel) { self.pending = nil }
+                    .help("保留当前状态，不执行恢复")
             }
         } message: { Text(pending?.action.confirmationMessage ?? "") }
         .confirmationDialog("确认撤销操作", isPresented: Binding(
@@ -79,7 +85,9 @@ struct RecoveryCenterView: View {
         ), titleVisibility: .visible) {
             if let entry = pendingUndo {
                 Button("执行反向操作") { pendingUndo = nil; store.undo(entry) }
+                    .help("执行与原操作相反的动作并重新扫描")
                 Button("取消", role: .cancel) { pendingUndo = nil }
+                    .help("保留当前状态，不执行撤销")
             }
         } message: {
             Text("\(pendingUndo?.safeDisplayName ?? "")\n\(pendingUndo?.inverseAction?.confirmationMessage ?? "")")
@@ -96,6 +104,7 @@ struct RecoveryCenterView: View {
             Spacer()
             Button(candidate.action.title) { pending = candidate }
                 .disabled(store.controllingItemID != nil)
+                .help("准备\(candidate.action.title)此项目，确认后执行")
         }
     }
 }

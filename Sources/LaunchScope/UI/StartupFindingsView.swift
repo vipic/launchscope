@@ -58,6 +58,7 @@ struct StartupFindingsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: UIConstants.cornerRadius, style: .continuous))
                     }
                     .buttonStyle(.plain)
+                    .help("查看这条\(finding.kind.title)的判断依据和相关项目")
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .focusable()

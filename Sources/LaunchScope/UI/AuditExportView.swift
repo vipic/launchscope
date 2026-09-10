@@ -44,8 +44,10 @@ struct AuditExportView: View {
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }
+                    .help("取消导出并关闭窗口")
                 Button("选择位置并导出") { save() }
                     .buttonStyle(.borderedProminent)
+                    .help("选择保存位置并导出当前设置的脱敏审计报告")
                     .accessibilityIdentifier("export.save")
             }
         }

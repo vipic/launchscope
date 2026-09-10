@@ -63,6 +63,7 @@ struct DashboardView: View {
                     Label("操作记录与恢复", systemImage: "clock.arrow.circlepath")
                 }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
+                .help("查看可恢复项目、可撤销操作和最近操作记录")
                 .accessibilityIdentifier("toolbar.recovery")
 
                 Menu {
@@ -70,11 +71,14 @@ struct DashboardView: View {
                     Button("打开系统登录项设置") {
                         SMAppService.openSystemSettingsLoginItems()
                     }
+                    .help("打开 macOS 的登录项与扩展设置")
                     Divider()
                     Button("LaunchScope 设置…") { openSettings() }
+                        .help("打开 LaunchScope 的隐私与更新设置")
                 } label: {
                     Label("显示选项", systemImage: "slider.horizontal.3")
                 }
+                .help("打开显示、隐私与应用设置选项")
                 .accessibilityIdentifier("toolbar.display-options")
 
                 Button {
@@ -88,6 +92,7 @@ struct DashboardView: View {
                 }
                 .disabled(store.isScanning)
                 .keyboardShortcut("r", modifiers: .command)
+                .help(store.isScanning ? "正在扫描启动来源" : "重新扫描所有启动来源并刷新结果")
                 .accessibilityIdentifier("toolbar.refresh")
 
                 Button {
@@ -111,6 +116,7 @@ struct DashboardView: View {
                         .accessibilityIdentifier("settings.notification-error")
                     Spacer()
                     Button("关闭") { store.dismissNotificationError() }
+                        .help("关闭这条通知错误提示")
                         .accessibilityIdentifier("settings.notification-error-dismiss")
                 }
                 .padding(.horizontal, 16)
@@ -148,6 +154,7 @@ struct DashboardView: View {
     ) -> some View {
         Button(title) { store.selectAcceptanceItem(source: source, label: label) }
             .disabled(!store.items.contains { $0.source == source && $0.label == label })
+            .help("在扫描结果中定位用于发布验收的\(source.compactTitle)记录")
             .accessibilityIdentifier(identifier)
     }
 }

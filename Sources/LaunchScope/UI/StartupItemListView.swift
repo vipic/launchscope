@@ -145,6 +145,7 @@ struct StartupItemListView: View {
             .accessibilityHint("打开详情并查看启动原因、参数和停止方式")
         }
         .buttonStyle(.plain)
+        .help("查看 \(group.name) 的启动原因、状态、参数和组件记录")
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
         .accessibilityIdentifier("startup-item.\(ScanSnapshotItem(item: representative).key)")
@@ -190,19 +191,23 @@ struct StartupItemListView: View {
             )
         }
         .buttonStyle(.plain)
+        .help("查看 \(item.displayName) 的启动原因、状态、参数和可用操作")
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
         .contextMenu {
             if let path = item.revealableSourcePath {
                 Button("在 Finder 中显示配置") { reveal(path) }
+                    .help("在 Finder 中定位此项目的配置文件")
             }
             if let path = item.executablePath {
                 Button("在 Finder 中显示执行文件") { reveal(path) }
+                    .help("在 Finder 中定位此项目实际运行的文件")
             }
             Button("复制标识") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(item.label, forType: .string)
             }
+            .help("将此启动项的标识复制到剪贴板")
         }
         .accessibilityIdentifier("startup-item.\(ScanSnapshotItem(item: item).key)")
         .focusable()
