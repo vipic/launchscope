@@ -83,6 +83,28 @@ final class AppUpdateTests: XCTestCase {
         XCTAssertTrue(command.hasSuffix("&"))
     }
 
+    func testDesignatedRequirementParsingExcludesExecutablePathFromOtherStream() {
+        let requirement = AppUpdater.parseDesignatedRequirement(
+            standardOutput: "designated => identifier \"com.nekutai.launchscope\" and certificate leaf = H\"abc123\"\n",
+            standardError: "Executable=/Applications/LaunchScope.app/Contents/MacOS/LaunchScope\n"
+        )
+
+        XCTAssertEqual(
+            requirement,
+            "identifier \"com.nekutai.launchscope\" and certificate leaf = H\"abc123\""
+        )
+        XCTAssertFalse(requirement?.contains("Executable=") == true)
+    }
+
+    func testDesignatedRequirementParsingSupportsCodesignWritingToStandardError() {
+        let requirement = AppUpdater.parseDesignatedRequirement(
+            standardOutput: "",
+            standardError: "Executable=/tmp/LaunchScope.app/Contents/MacOS/LaunchScope\ndesignated => identifier \"com.nekutai.launchscope\"\n"
+        )
+
+        XCTAssertEqual(requirement, "identifier \"com.nekutai.launchscope\"")
+    }
+
     func testPublishedReleaseDownloadsWithProgressAndChecksum() async throws {
         guard ProcessInfo.processInfo.environment["LAUNCHSCOPE_NETWORK_TESTS"] == "1" else {
             throw XCTSkip("设置 LAUNCHSCOPE_NETWORK_TESTS=1 运行真实更新下载测试")

@@ -248,10 +248,25 @@ struct AppUpdater: AppUpdating, Sendable {
             timeout: 15
         )
         guard result.exitCode == 0, !result.timedOut else { return nil }
-        let output = result.standardOutput + "\n" + result.standardError
-        return output.components(separatedBy: "designated => ").last?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .nilIfEmpty
+        return parseDesignatedRequirement(
+            standardOutput: result.standardOutput,
+            standardError: result.standardError
+        )
+    }
+
+    static func parseDesignatedRequirement(
+        standardOutput: String,
+        standardError: String
+    ) -> String? {
+        for output in [standardOutput, standardError] {
+            for line in output.split(whereSeparator: \.isNewline) {
+                guard let range = line.range(of: "designated => ") else { continue }
+                return line[range.upperBound...]
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .nilIfEmpty
+            }
+        }
+        return nil
     }
 
     private static func isTrustedGitHubAsset(_ url: URL, extension pathExtension: String) -> Bool {
