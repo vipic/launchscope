@@ -4,7 +4,43 @@ struct StartupItemGroup: Identifiable {
     var id: String
     var name: String
     var items: [StartupItem]
-    var enabledCount: Int { items.count { $0.isEnabled != false && $0.runtime.state != .disabled } }
+    var enabledCount: Int {
+        items.count {
+            $0.isEnabled == true || $0.runtime.state == .running || $0.runtime.state == .loaded
+        }
+    }
+    var runningCount: Int { items.count { $0.runtime.state == .running } }
+    var disabledCount: Int { items.count { $0.isEnabled == false || $0.runtime.state == .disabled } }
+    var isRunning: Bool { runningCount > 0 }
+    var isFullyDisabled: Bool { !items.isEmpty && disabledCount == items.count }
+    var statusSummary: String {
+        switch (runningCount, disabledCount) {
+        case let (running, disabled) where running > 0 && disabled > 0:
+            return "\(running) 条组件正在运行 · \(disabled) 条已停用"
+        case let (running, _) where running > 0:
+            return "\(running) 条组件正在运行"
+        case let (_, disabled) where disabled > 0 && enabledCount > 0:
+            return "\(enabledCount) 条组件已启用 · \(disabled) 条已停用"
+        case let (_, disabled) where disabled > 0:
+            return "\(disabled) 条组件已停用"
+        default:
+            if items.contains(where: { $0.runtime.state == .loaded }) {
+                return "组件已加载，按需运行"
+            }
+            if items.contains(where: { $0.isEnabled == true }) {
+                return "组件已启用，按需运行"
+            }
+            return "组件状态未知"
+        }
+    }
+    var statusSystemImage: String {
+        if runningCount > 0 { return "play.circle.fill" }
+        if disabledCount > 0 { return "pause.circle" }
+        if items.contains(where: { $0.runtime.state == .loaded || $0.isEnabled == true }) {
+            return "checkmark.circle"
+        }
+        return "questionmark.circle"
+    }
     var roleSummary: String {
         let roles = items.map(\.componentRole)
         var counts: [String: Int] = [:]
@@ -28,6 +64,18 @@ enum StartupItemListData {
 
     static func matchesSearch(query: String, searchableText: String) -> Bool {
         query.isEmpty || searchableText.contains(query)
+    }
+
+    static func statusGroups(for items: [StartupItem], filter: DashboardFilter) -> [StartupItemGroup] {
+        let groups = groups(for: items)
+        switch filter {
+        case .running:
+            return groups.filter(\.isRunning)
+        case .disabled:
+            return groups.filter(\.isFullyDisabled)
+        default:
+            return groups
+        }
     }
 
     private static func sourcePriority(_ source: StartupSource) -> Int {

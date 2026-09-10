@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SidebarView: View {
     @ObservedObject var store: DashboardStore
+    var hideAppleItems: Bool
     var showRecovery: () -> Void
 
     private let overviewFilters: [DashboardFilter] = [
@@ -25,7 +26,7 @@ struct SidebarView: View {
             Section("自启动来源") {
                 ForEach(startupSources) { source in
                     let filter = DashboardFilter.source(source)
-                    if store.count(for: filter) > 0 {
+                    if visibleCount(for: filter) > 0 {
                         sidebarButton(filter)
                     }
                 }
@@ -34,7 +35,7 @@ struct SidebarView: View {
             Section("相关自动任务") {
                 ForEach(relatedSources) { source in
                     let filter = DashboardFilter.source(source)
-                    if store.count(for: filter) > 0 {
+                    if visibleCount(for: filter) > 0 {
                         sidebarButton(filter)
                     }
                 }
@@ -84,7 +85,7 @@ struct SidebarView: View {
             HStack {
                 Label(filter.title, systemImage: filter.systemImage).lineLimit(2)
                 Spacer()
-                Text(store.count(for: filter), format: .number)
+                Text(visibleCount(for: filter), format: .number)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
@@ -93,5 +94,9 @@ struct SidebarView: View {
         .buttonStyle(.plain)
         .listRowBackground(store.selectedFilter == filter ? LaunchScopePalette.selectedFill : Color.clear)
         .accessibilityIdentifier("sidebar.\(filter.id)")
+    }
+
+    private func visibleCount(for filter: DashboardFilter) -> Int {
+        store.visibleCount(for: filter, hideAppleItems: hideAppleItems)
     }
 }

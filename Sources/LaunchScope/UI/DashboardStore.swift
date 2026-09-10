@@ -293,18 +293,67 @@ final class DashboardStore: ObservableObject {
     }
 
     func filteredItems(hideAppleItems: Bool, hideTrustedItems: Bool) -> [StartupItem] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return items.filter { item in
-            if hideAppleItems, item.isAppleItem, selectedFilter != .apple { return false }
+        filteredItems(
+            for: selectedFilter,
+            hideAppleItems: hideAppleItems,
+            hideTrustedItems: hideTrustedItems,
+            query: searchText
+        )
+    }
+
+    func visibleCount(
+        for filter: DashboardFilter,
+        hideAppleItems: Bool,
+        hideTrustedItems: Bool = false
+    ) -> Int {
+        switch filter {
+        case .findings: return findings.count { $0.category.requiresReview }
+        case .issues: return issues.count
+        default:
+            let visible = filteredItems(
+                for: filter,
+                hideAppleItems: hideAppleItems,
+                hideTrustedItems: hideTrustedItems,
+                query: ""
+            )
+            return StartupItemListData.groups(for: visible).count
+        }
+    }
+
+    private func filteredItems(
+        for filter: DashboardFilter,
+        hideAppleItems: Bool,
+        hideTrustedItems: Bool,
+        query rawQuery: String
+    ) -> [StartupItem] {
+        let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let displayable = items.filter { item in
+            if hideAppleItems, item.isAppleItem, filter != .apple { return false }
             if hideTrustedItems, isTrusted(item) { return false }
+            return true
+        }
+
+        if filter == .running || filter == .disabled {
+            return StartupItemListData.statusGroups(for: displayable, filter: filter)
+                .filter { group in
+                    query.isEmpty || group.items.contains { item in
+                        StartupItemListData.matchesSearch(
+                            query: query,
+                            searchableText: searchableTextByID[item.id, default: item.searchableText]
+                        )
+                    }
+                }
+                .flatMap(\.items)
+        }
+
+        return displayable.filter { item in
             let filterMatches: Bool
-            switch selectedFilter {
+            switch filter {
             case .all: filterMatches = true
             case .thirdParty: filterMatches = !item.isAppleItem
             case .apple: filterMatches = item.isAppleItem
-            case .running: filterMatches = item.runtime.state == .running
+            case .running, .disabled: filterMatches = false
             case .missingTarget: filterMatches = item.targetExists == false
-            case .disabled: filterMatches = item.isEnabled == false || item.runtime.state == .disabled
             case .untrusted: filterMatches = !item.isAppleItem && !isTrusted(item)
             case .highRisk: filterMatches = !item.isAppleItem && riskAssessment(for: item).level.requiresAttention
             case .findings: filterMatches = false

@@ -11,7 +11,11 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationSplitView {
-            SidebarView(store: store, showRecovery: { showRecoveryCenter = true })
+            SidebarView(
+                store: store,
+                hideAppleItems: hideAppleItems,
+                showRecovery: { showRecoveryCenter = true }
+            )
         } content: {
             if store.selectedFilter == .issues {
                 IssuesView(store: store)

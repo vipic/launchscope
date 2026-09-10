@@ -128,8 +128,8 @@ struct StartupItemListView: View {
                         .lineLimit(1)
                     HStack(spacing: 6) {
                         StatusBadge(
-                            title: group.items.contains { $0.runtime.state == .running } ? "正在运行" : "未运行",
-                            systemImage: group.items.contains { $0.runtime.state == .running } ? "play.circle.fill" : "pause.circle"
+                            title: group.statusSummary,
+                            systemImage: group.statusSystemImage
                         )
                     }
                 }
@@ -141,7 +141,7 @@ struct StartupItemListView: View {
             .background(isSelected ? LaunchScopePalette.selectedFill : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: UIConstants.cornerRadius, style: .continuous))
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(group.name)，\(group.items.count) 条记录，\(group.roleSummary)")
+            .accessibilityLabel("\(group.name)，\(group.items.count) 条记录，\(group.roleSummary)，\(group.statusSummary)")
             .accessibilityHint("打开详情并查看启动原因、参数和停止方式")
         }
         .buttonStyle(.plain)
