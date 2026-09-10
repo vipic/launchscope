@@ -34,13 +34,22 @@ struct AppRelease: Equatable, Sendable {
     let pageURL: URL
     let downloadURL: URL
     let checksumURL: URL?
+    let downloadSize: Int
 
-    init(version: String, title: String, pageURL: URL, downloadURL: URL? = nil, checksumURL: URL? = nil) {
+    init(
+        version: String,
+        title: String,
+        pageURL: URL,
+        downloadURL: URL? = nil,
+        checksumURL: URL? = nil,
+        downloadSize: Int = 0
+    ) {
         self.version = version
         self.title = title
         self.pageURL = pageURL
         self.downloadURL = downloadURL ?? pageURL
         self.checksumURL = checksumURL
+        self.downloadSize = downloadSize
     }
 }
 
@@ -92,10 +101,12 @@ struct GitHubAppUpdateChecker: AppUpdateChecking {
             struct Asset: Decodable {
                 let name: String
                 let browserDownloadURL: URL
+                let size: Int
 
                 enum CodingKeys: String, CodingKey {
                     case name
                     case browserDownloadURL = "browser_download_url"
+                    case size
                 }
             }
 
@@ -117,7 +128,8 @@ struct GitHubAppUpdateChecker: AppUpdateChecking {
             throw AppUpdateError.invalidRelease
         }
         let version = String(payload.tagName.trimmingPrefix("v"))
-        guard let dmg = payload.assets.first(where: { $0.name == "LaunchScope-\(version).dmg" }) else {
+        guard let dmg = payload.assets.first(where: { $0.name == "LaunchScope-\(version).dmg" }),
+              let checksum = payload.assets.first(where: { $0.name == "LaunchScope-\(version).dmg.sha256" }) else {
             throw AppUpdateError.invalidRelease
         }
         return AppRelease(
@@ -126,7 +138,8 @@ struct GitHubAppUpdateChecker: AppUpdateChecking {
                 ?? "LaunchScope \(version)",
             pageURL: payload.htmlURL,
             downloadURL: dmg.browserDownloadURL,
-            checksumURL: payload.assets.first(where: { $0.name == "LaunchScope-\(version).dmg.sha256" })?.browserDownloadURL
+            checksumURL: checksum.browserDownloadURL,
+            downloadSize: dmg.size
         )
     }
 }

@@ -49,5 +49,6 @@ deploy 会组装 ~/Applications/LaunchScope Dev.app，并使用 CODESIGN_IDENTIT
 正式发布使用 mise run release -- <x.y.z>。完整流程见
 [发布检查清单](docs/RELEASE_CHECKLIST.md)。
 
-应用内更新只会在用户点击“立即更新”后下载正式 DMG，校验版本、签名和 SHA-256，
-再替换当前应用并重启。
+应用内更新只会在用户点击“立即更新”后下载正式 DMG，并显示目标版本和下载进度。
+下载完成后会在退出前校验 SHA-256、版本和签名身份，再由独立安装程序备份并替换当前应用；
+复制或校验失败时恢复原版本，下次启动会显示失败原因。

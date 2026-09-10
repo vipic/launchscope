@@ -33,7 +33,7 @@ struct SettingsView: View {
                     updateStatus
                     HStack {
                         Button("检查更新") { updateStore.checkForUpdates() }
-                            .disabled(updateStore.state == .checking || isInstalling)
+                            .disabled(updateStore.state == .checking || isUpdating)
                             .accessibilityIdentifier("settings.check-for-updates")
                         if case let .updateAvailable(release) = updateStore.state {
                             Button("立即更新") { updateStore.installUpdate(release) }
@@ -83,26 +83,48 @@ struct SettingsView: View {
                 ProgressView().controlSize(.small)
                 Text("正在检查更新…")
             }
-        case .installing:
+        case let .downloading(release, progress):
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("正在下载 LaunchScope \(release.version)…")
+                    Spacer()
+                    Text(progress, format: .percent.precision(.fractionLength(0)))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                ProgressView(value: progress)
+                Text("当前版本 \(updateStore.currentVersion) → 目标版本 \(release.version)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        case let .installing(release):
             HStack {
                 ProgressView().controlSize(.small)
-                Text("正在下载并安装 (release.version)…")
+                Text("正在准备安装 LaunchScope \(release.version)…应用即将重新启动。")
             }
         case .upToDate:
             Label("当前已是最新版本", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(LaunchScopePalette.healthy)
         case let .updateAvailable(release):
-            Label("发现新版本 \(release.version)：\(release.title)", systemImage: "arrow.down.circle.fill")
-                .foregroundStyle(LaunchScopePalette.accent)
+            VStack(alignment: .leading, spacing: 4) {
+                Label("发现新版本", systemImage: "arrow.down.circle.fill")
+                    .foregroundStyle(LaunchScopePalette.accent)
+                Text("当前版本 \(updateStore.currentVersion) → 可更新至 LaunchScope \(release.version)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         case let .failed(message):
-            Label("检查失败：\(message)", systemImage: "exclamationmark.triangle.fill")
+            Label(message, systemImage: "exclamationmark.triangle.fill")
                 .foregroundStyle(LaunchScopePalette.warning)
         }
     }
 
-    private var isInstalling: Bool {
-        if case .installing = updateStore.state { return true }
-        return false
+    private var isUpdating: Bool {
+        switch updateStore.state {
+        case .downloading, .installing: true
+        default: false
+        }
     }
 
     private var versionDescription: String {
