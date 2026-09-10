@@ -247,7 +247,9 @@ final class AppUpdateStoreTests: XCTestCase {
         for _ in 0..<30 where store.state == .checking { await Task.yield() }
 
         store.installUpdate(release)
-        for _ in 0..<50 where !recorder.didTerminate { await Task.yield() }
+        for _ in 0..<100 where !recorder.didTerminate {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
 
         XCTAssertTrue(recorder.didTerminate)
         XCTAssertEqual(store.state, .installing(release))
