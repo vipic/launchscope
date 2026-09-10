@@ -16,10 +16,10 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
 
     var title: String {
         switch self {
-        case .disable: "停用"
-        case .enable: "恢复启用"
-        case .stopHomebrew: "停止服务"
-        case .startHomebrew: "启动服务"
+        case .disable: "停止自启动"
+        case .enable: "恢复自启动"
+        case .stopHomebrew: "停止自启动"
+        case .startHomebrew: "恢复自启动"
         case .disableCron, .disableShellLine: "安全停用"
         case .enableCron, .enableShellLine: "恢复启用"
         case .disableGlobalAgent: "停用全局 Agent"
@@ -52,10 +52,10 @@ enum StartupItemControlAction: String, Codable, Equatable, Sendable {
 
     var confirmationTitle: String {
         switch self {
-        case .disable: "停用这个 LaunchAgent？"
-        case .enable: "恢复启用这个 LaunchAgent？"
-        case .stopHomebrew: "停止这个 Homebrew 服务？"
-        case .startHomebrew: "启动这个 Homebrew 服务？"
+        case .disable: "停止这个项目的自启动？"
+        case .enable: "恢复这个项目的自启动？"
+        case .stopHomebrew: "停止这个服务的自启动？"
+        case .startHomebrew: "恢复这个服务的自启动？"
         case .disableCron: "停用这条 Cron 规则？"
         case .enableCron: "恢复这条 Cron 规则？"
         case .disableShellLine: "停用这条 Shell 命令？"

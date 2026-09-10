@@ -56,7 +56,7 @@ struct RecoveryCenterView: View {
                     if let error = store.historyPersistenceError { Text(error).foregroundStyle(LaunchScopePalette.danger) }
                 }.font(.callout).padding(12)
             }
-            .navigationTitle("恢复中心")
+            .navigationTitle("操作记录与恢复")
             .toolbar { Button("完成") { dismiss() } }
         }
         .frame(minWidth: 720, minHeight: 520)

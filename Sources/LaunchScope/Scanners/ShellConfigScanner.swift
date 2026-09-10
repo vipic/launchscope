@@ -18,7 +18,13 @@ struct ShellConfigScanner: Sendable {
         for path in files where FileManager.default.fileExists(atPath: path) {
             do {
                 let contents = try String(contentsOfFile: path, encoding: .utf8)
-                items.append(contentsOf: Self.parse(contents, path: path))
+                let metadata = SourceFileMetadata.read(path: path)
+                items.append(contentsOf: Self.parse(contents, path: path).map { original in
+                    var item = original
+                    item.sourceCreatedAt = metadata.createdAt
+                    item.sourceModifiedAt = metadata.modifiedAt
+                    return item
+                })
             } catch {
                 issues.append(ScanIssue(source: path, message: error.localizedDescription, severity: .warning))
             }

@@ -28,15 +28,15 @@ extension StartupItem {
             )
         case .globalLaunchAgent:
             return StartupItemGuidance(
-                title: isEnabled == false ? "可由管理员安全恢复" : "可由管理员安全停用",
-                summary: "管理员辅助程序会独立校验配置位置、root 所有权、文件指纹、Label 和 Apple 签名，再管理当前用户的全局 Agent 实例。",
+                title: "当前仅提供查看",
+                summary: "这是系统范围的登录任务。当前精简版不直接修改它，可先定位配置并确认所属应用。",
                 diagnosticCommand: launchctlPrintCommand,
                 opensLoginItemSettings: false
             )
         case .launchDaemon:
             return StartupItemGuidance(
-                title: isEnabled == false ? "可由管理员安全恢复" : "可由管理员安全停用",
-                summary: "该操作影响整个系统。辅助程序会独立校验配置、root 所有权、文件指纹和非 Apple 签名，且不会删除或改写 plist。",
+                title: "当前仅提供查看",
+                summary: "这是影响整个系统的后台服务。当前精简版不直接修改它，可先定位配置并确认所属应用。",
                 diagnosticCommand: launchctlPrintCommand,
                 opensLoginItemSettings: false
             )
@@ -57,17 +57,15 @@ extension StartupItem {
             )
         case .cron:
             return StartupItemGuidance(
-                title: isEnabled == false ? "可安全恢复" : "可安全停用",
-                summary: "LaunchScope 会重新读取完整 crontab，确认目标行未变化后仅标记这一行；原文保留在可恢复标记中。",
+                title: "作为相关自动任务查看",
+                summary: "Cron 是定时任务，不一定在开机时运行。当前精简版不修改 crontab。",
                 diagnosticCommand: "/usr/bin/crontab -l",
                 opensLoginItemSettings: false
             )
         case .shellConfiguration:
             return StartupItemGuidance(
-                title: configuration["可安全单行修改"] == "是" ? (isEnabled == false ? "可安全恢复" : "可安全停用") : "复杂 Shell 配置保持只读",
-                summary: configuration["可安全单行修改"] == "是"
-                    ? "LaunchScope 只修改这一行，并要求文件归当前用户所有、路径受允许且内容与扫描时完全一致。"
-                    : "文件包含多行结构、续行或 heredoc，无法证明单行修改安全，因此不提供操作入口。",
+                title: "作为相关自动任务查看",
+                summary: "Shell 初始化命令通常只在打开终端时运行。当前精简版不修改配置文件。",
                 diagnosticCommand: sourcePath.map { "/usr/bin/sed -n '1,160p' \(Self.shellQuote($0))" },
                 opensLoginItemSettings: false
             )

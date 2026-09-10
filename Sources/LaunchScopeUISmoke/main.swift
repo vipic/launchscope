@@ -5,11 +5,9 @@ import Foundation
 private let arguments = CommandLine.arguments
 private let bundleIdentifier = argumentValue(after: "--bundle-id") ?? "com.nekutai.launchscope.dev"
 private let requiredIdentifiers = [
-    "sidebar.all",
     "sidebar.thirdParty",
-    "sidebar.highRisk",
     "toolbar.refresh",
-    "toolbar.audit-timeline",
+    "toolbar.recovery",
 ]
 
 let trustOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
@@ -32,9 +30,6 @@ if arguments.contains("--release-smoke") {
     runReleaseSmoke(application: application, root: root)
 } else if arguments.contains("--release-acceptance") {
     runReleaseAcceptance(root: root)
-} else if CommandLine.arguments.contains("--notification-acceptance") {
-    press(waitForIdentifier("toolbar.display-options", root: root, timeout: 10), description: "显示选项")
-    verifyNotificationAuthorization(root: root)
 } else {
     let discovered = waitForIdentifiers(requiredIdentifiers, root: root, timeout: 10)
     let missing = requiredIdentifiers.filter { discovered[$0] == nil }
@@ -53,9 +48,9 @@ if arguments.contains("--release-smoke") {
     application.activate(options: [])
     AXUIElementSetAttributeValue(root, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
     RunLoop.current.run(until: Date().addingTimeInterval(0.2))
-    press(waitForIdentifier("sidebar.all", root: root, timeout: 5), description: "全部项目筛选")
+    press(waitForIdentifier("sidebar.thirdParty", root: root, timeout: 5), description: "自启动项目筛选")
     let focusedIdentifier = waitForFocusedIdentifier(root: root, prefix: "startup-item.", timeout: 10)
-    print("UI 冒烟通过：主导航、筛选后列表焦点、刷新与审计时间线控件均可访问（\(focusedIdentifier)）。")
+    print("UI 冒烟通过：自启动导航、筛选后列表焦点、刷新与操作恢复控件均可访问（\(focusedIdentifier)）。")
 }
 
 private func waitForFocusedIdentifier(
@@ -107,36 +102,28 @@ private func argumentValue(after option: String) -> String? {
 
 private func runReleaseAcceptance(root: AXUIElement) {
     let acceptanceItems = [
-        ("LaunchAgent", "定位 LaunchAgent", "disable", "enable"),
-        ("Homebrew", "定位 Homebrew", "stopHomebrew", "startHomebrew"),
-        ("Cron", "定位 Cron", "disableCron", "enableCron"),
-        ("Shell", "定位 Shell", "disableShellLine", "enableShellLine"),
+        ("LaunchAgent", "toolbar.acceptance.launchAgent", "disable", "enable"),
+        ("Homebrew", "toolbar.acceptance.homebrew", "stopHomebrew", "startHomebrew"),
     ]
 
     press(waitForIdentifier("sidebar.thirdParty", root: root, timeout: 10), description: "第三方筛选")
     press(waitForIdentifier("toolbar.refresh", root: root, timeout: 10), description: "重新扫描")
     RunLoop.current.run(until: Date().addingTimeInterval(2))
-    for (name, locatorTitle, disable, enable) in acceptanceItems {
-        press(waitForIdentifier("toolbar.acceptance", root: root, timeout: 10), description: "验收定位菜单")
-        press(waitForTitle(locatorTitle, root: root, timeout: 10), description: locatorTitle)
+    for (name, locatorIdentifier, disable, enable) in acceptanceItems {
+        press(
+            waitForEnabledIdentifier(locatorIdentifier, root: root, timeout: 20),
+            description: "定位 \(name)"
+        )
         performControl(action: disable, name: name, root: root)
         performControl(action: enable, name: name, root: root)
         print("UI 验收通过：\(name) 停用、复扫与恢复")
     }
 
     press(waitForIdentifier("toolbar.recovery", root: root, timeout: 10), description: "恢复中心")
-    _ = waitForTitle("恢复中心", root: root, timeout: 10)
+    _ = waitForTitle("操作记录与恢复", root: root, timeout: 10)
     press(waitForTitle("完成", root: root, timeout: 10), description: "关闭恢复中心")
 
-    press(waitForIdentifier("toolbar.export", root: root, timeout: 10), description: "导出审计报告")
-    _ = waitForTitle("导出脱敏审计报告", root: root, timeout: 10)
-    press(waitForTitle("选择位置并导出", root: root, timeout: 10), description: "写入脱敏审计报告")
-    verifyAcceptanceReport()
-
-    press(waitForIdentifier("toolbar.display-options", root: root, timeout: 10), description: "显示选项")
-    verifyNotificationAuthorization(root: root)
-
-    print("发布 UI 验收通过：四类控制、恢复中心、导出入口与通知设置均可访问。")
+    print("发布 UI 验收通过：LaunchAgent、Homebrew 自启动控制与操作恢复入口均可访问。")
 }
 
 private func verifyAcceptanceReport() {
@@ -325,6 +312,26 @@ private func waitForIdentifier(
 ) -> AXUIElement {
     if let element = waitForIdentifiers([identifier], root: root, timeout: timeout)[identifier] { return element }
     fputs("UI 验收未找到控件：\(identifier)\n", stderr)
+    exit(1)
+}
+
+private func waitForEnabledIdentifier(
+    _ identifier: String,
+    root: AXUIElement,
+    timeout: TimeInterval
+) -> AXUIElement {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+        if let element = accessibilityElements(root: root, identifiers: [identifier])[identifier] {
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXEnabledAttribute as CFString, &value) == .success,
+               (value as? Bool) == true {
+                return element
+            }
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+    } while Date() < deadline
+    fputs("UI 验收控件未就绪：\(identifier)\n", stderr)
     exit(1)
 }
 

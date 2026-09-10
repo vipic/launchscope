@@ -5,9 +5,9 @@
 - 工作区无未提交改动，版本号使用 `x.y.z`。
 - `mise run check` 全部通过，覆盖率不低于仓库阈值。
 - 已安装稳定代码签名证书 `${CODESIGN_IDENTITY:-Nekutai}`，不得使用 ad-hoc。
-- 手动确认首次扫描、筛选、详情、报告导出、信任标记、恢复中心和资源观察。
-- 使用测试项目分别确认 LaunchAgent、Homebrew、Cron、Shell 的二次确认、停用、复扫和恢复。
-- 确认通知保持默认关闭，开启时由系统显示权限请求。
+- 手动确认首次扫描、筛选、来源归组、详情中的启动原因/时间/参数，以及恢复中心。
+- 使用测试项目分别确认用户 LaunchAgent 与 Homebrew 服务的二次确认、停用、复扫和恢复。
+- 确认全局 LaunchAgent、LaunchDaemon、Cron 与 Shell 仍保持只读。
 - `mise run version:next` 可根据 Conventional Commits 给出建议版本；正式 `publish` 仍必须显式输入并复核版本号。
 
 专用测试项目可自动创建并在退出时恢复：
@@ -16,9 +16,8 @@
 mise run acceptance:release
 ```
 
-- 命令只在当前用户没有 crontab 且 `~/.bashrc` 不存在时继续，避免覆盖现有配置。
-- 临时 formula、tap、LaunchAgent、crontab 和 Shell 行均使用 `launchscope-acceptance` 唯一标识；异常退出也会尝试清理。
-- UI 自动完成二次确认、停用、复扫与恢复，随后从 launchd、Homebrew、crontab 和文件内容反向验证恢复状态。
+- 临时 formula、tap 和 LaunchAgent 均使用 `launchscope-acceptance` 唯一标识；异常退出也会尝试清理。
+- UI 自动完成二次确认、停用、复扫与恢复，随后从 launchd 与 Homebrew 状态反向验证恢复结果。
 
 ## 构建与产物
 

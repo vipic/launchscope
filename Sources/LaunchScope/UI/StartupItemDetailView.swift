@@ -14,26 +14,15 @@ struct StartupItemDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: UIConstants.sectionSpacing) {
                         header(item)
-                        if [.backgroundTask, .loginItem].contains(item.source) {
-                            VStack(alignment: .leading, spacing: UIConstants.compactSpacing) {
-                                Label("后台记录时效", systemImage: "clock").font(.headline)
-                                Text(store.backgroundTaskFreshness).font(.callout)
-                                Button("更新后台记录…") { store.refreshBackgroundTasks() }
-                                    .disabled(store.isScanning)
-                                    .help("macOS 会要求管理员授权")
-                            }
-                            .padding(12).background(LaunchScopePalette.secondaryFill)
-                        }
-                        runtimeSection(item)
-                        componentSection(item)
+                        explanationSection(item)
                         actionSection(item)
-                        riskSection(item)
-                        identitySection(item)
-                        if item.runtime.processIdentifier != nil { resourceSection(item) }
-                        annotationSection(item)
+                        timelineSection(item)
+                        componentSection(item)
                         launchSection(item)
+                        runtimeSection(item)
+                        identitySection(item)
                         signatureSection(item)
-                        DisclosureGroup("查看原始配置") { configurationSection(item) }
+                        DisclosureGroup("查看完整原始配置") { configurationSection(item) }
                         notesSection(item)
                     }
                     .padding(20)
@@ -64,13 +53,36 @@ struct StartupItemDetailView: View {
         } message: {
             Text(confirmationMessage)
         }
-        .sheet(isPresented: $showAnnotationEditor) {
-            if let item {
-                ItemAnnotationEditorView(item: item, annotation: store.annotation(for: item)) { note, tags, trusted in
-                    store.saveAnnotation(for: item, note: note, tags: tags, isTrusted: trusted)
-                }
-            }
+    }
+
+    private func explanationSection(_ item: StartupItem) -> some View {
+        let explanation = item.explanation
+        return DetailSection(title: "为什么会自动启动", systemImage: "questionmark.circle") {
+            DetailRow(label: "加入方式", value: explanation.origin)
+            DetailRow(label: "原因", value: explanation.reason)
+            DetailRow(label: "启动时机", value: explanation.trigger)
+            Text(explanation.confidence)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+    }
+
+    private func timelineSection(_ item: StartupItem) -> some View {
+        DetailSection(title: "什么时候出现", systemImage: "calendar.badge.clock") {
+            DetailRow(label: "配置创建", value: formatted(item.sourceCreatedAt))
+            DetailRow(label: "最后修改", value: formatted(item.sourceModifiedAt))
+            DetailRow(label: "首次发现", value: formatted(store.firstObservedAt(for: item)))
+            if [.backgroundTask, .loginItem].contains(item.source) {
+                DetailRow(label: "后台记录", value: store.backgroundTaskFreshness)
+            }
+            Text("配置时间来自文件系统，可能因升级或重新安装而变化；“首次发现”只表示 LaunchScope 第一次看到它。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func formatted(_ date: Date?) -> String? {
+        date?.formatted(date: .abbreviated, time: .shortened)
     }
 
     private func resourceSection(_ item: StartupItem) -> some View {
@@ -179,8 +191,9 @@ struct StartupItemDetailView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.displayName).font(.title2.bold()).textSelection(.enabled)
                 Text(item.label).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
-                Text(store.riskAssessment(for: item).title)
-                    .font(.headline)
+                        Text(item.explanation.origin)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
             }
             Spacer()
         }
@@ -199,23 +212,30 @@ struct StartupItemDetailView: View {
     }
 
     private func componentSection(_ item: StartupItem) -> some View {
-        let related = store.items.filter { $0.groupName == item.groupName }
+        let related = store.items.filter { $0.groupIdentifier == item.groupIdentifier }
         guard related.count > 1 else { return AnyView(EmptyView()) }
-        return AnyView(DetailSection(title: "同一应用的其他组件", systemImage: "square.stack.3d.up") {
-            Text("这些项目都归属于 \(item.ownerName)。每个组件负责的功能不同，是否需要取决于你是否使用该功能。")
+        return AnyView(DetailSection(title: "同一项目的其他记录", systemImage: "square.stack.3d.up") {
+            Text("同一个自启动项目可能同时出现在系统后台记录、launchd 和 Homebrew 中；下面按来源分别展示。")
                 .font(.callout).foregroundStyle(.secondary)
             ForEach(related) { component in
-                HStack(alignment: .top, spacing: UIConstants.regularSpacing) {
-                    Image(systemName: component.id == item.id ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(component.id == item.id ? LaunchScopePalette.accent : .secondary)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(component.displayName).font(.callout.bold())
-                        Text("\(component.componentRole) · \(component.source.compactTitle) · \(component.statusTitle)")
-                            .font(.callout).foregroundStyle(.secondary)
-                        Text(component.componentNeedHint).font(.caption).foregroundStyle(.secondary)
+                Button {
+                    store.selectedItemID = component.id
+                } label: {
+                    HStack(alignment: .top, spacing: UIConstants.regularSpacing) {
+                        Image(systemName: component.id == item.id ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(component.id == item.id ? LaunchScopePalette.accent : .secondary)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(component.displayName).font(.callout.bold())
+                            Text("\(component.source.compactTitle) · \(component.statusTitle)")
+                                .font(.callout).foregroundStyle(.secondary)
+                            Text(component.sourcePath ?? component.componentNeedHint)
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                        }
+                        Spacer()
                     }
-                    Spacer()
                 }
+                .buttonStyle(.plain)
+                .accessibilityHint("切换到这条来源记录")
             }
         })
     }
@@ -248,13 +268,20 @@ struct StartupItemDetailView: View {
     }
 
     private func launchSection(_ item: StartupItem) -> some View {
-        DetailSection(title: "启动方式", systemImage: "play.rectangle.on.rectangle") {
+        DetailSection(title: "实际运行内容", systemImage: "terminal") {
             DetailRow(label: "执行文件", value: item.executablePath)
             DetailRow(label: "参数", value: item.arguments.isEmpty ? nil : item.arguments.joined(separator: "\n"))
             DetailRow(label: "工作目录", value: item.workingDirectory)
             DetailRow(label: "加载时运行", value: item.runAtLoad.map { $0 ? "是" : "否" })
             DetailRow(label: "KeepAlive", value: item.keepAliveDescription)
             DetailRow(label: "计划/触发", value: item.scheduleDescription)
+            if !item.environment.isEmpty {
+                Divider()
+                Text("环境变量").font(.caption).foregroundStyle(.secondary)
+                ForEach(item.environment.keys.sorted(), id: \.self) { key in
+                    DetailRow(label: key, value: visibleValue(item.environment[key], key: key))
+                }
+            }
         }
     }
 

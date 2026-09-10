@@ -47,7 +47,7 @@ description = "录制启动项列表视觉快照基线"
 run = "env LAUNCHSCOPE_RECORD_SNAPSHOTS=1 swift test --filter StartupItemRowSnapshotTests"
 
 [tasks."acceptance:release"]
-description = "创建可回收测试项目并验收四类停用恢复流程"
+description = "创建可回收测试项目并验收两类自启动停用恢复流程"
 run = "scripts/release_acceptance.sh"
 
 [tasks."smoke:release"]

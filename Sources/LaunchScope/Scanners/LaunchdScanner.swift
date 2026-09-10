@@ -53,6 +53,9 @@ struct LaunchdScanner: Sendable {
                             throw ScanError.invalidPropertyList
                         }
                         var item = Self.makeItem(plist: plist, file: file, location: location)
+                        let metadata = SourceFileMetadata.read(path: file.path)
+                        item.sourceCreatedAt = metadata.createdAt
+                        item.sourceModifiedAt = metadata.modifiedAt
                         if location.source == .globalLaunchAgent || location.source == .launchDaemon {
                             item.controlMetadata["fileSHA256"] = SHA256.hash(data: data)
                                 .map { String(format: "%02x", $0) }.joined()

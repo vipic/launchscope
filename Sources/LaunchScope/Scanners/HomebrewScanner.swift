@@ -31,7 +31,14 @@ struct HomebrewScanner: Sendable {
             )])
         }
         do {
-            return (try Self.parse(Data(result.standardOutput.utf8)), [])
+            let items = try Self.parse(Data(result.standardOutput.utf8)).map { original in
+                var item = original
+                let metadata = SourceFileMetadata.read(path: item.sourcePath)
+                item.sourceCreatedAt = metadata.createdAt
+                item.sourceModifiedAt = metadata.modifiedAt
+                return item
+            }
+            return (items, [])
         } catch {
             return ([], [ScanIssue(source: "Homebrew", message: "无法解析服务列表：\(error.localizedDescription)", severity: .warning)])
         }

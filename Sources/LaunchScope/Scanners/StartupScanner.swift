@@ -31,6 +31,29 @@ struct StartupScanner: Sendable {
         items += shell.items
         issues += shell.issues
 
+        // Homebrew 的状态记录适合控制服务，launchd plist 则包含完整命令、
+        // 环境变量和启动条件。合并两者，避免用户在重复条目间来回切换。
+        let launchdByLabel = Dictionary(grouping: launchd.items, by: \.label)
+            .compactMapValues { matches in
+                matches.first { $0.source == .userLaunchAgent } ?? matches.first
+            }
+        items = items.map { original in
+            guard original.source == .homebrewService,
+                  let launchdItem = launchdByLabel[original.label] else { return original }
+            var item = original
+            item.executablePath = launchdItem.executablePath
+            item.arguments = launchdItem.arguments
+            item.workingDirectory = launchdItem.workingDirectory
+            item.runAtLoad = launchdItem.runAtLoad
+            item.keepAliveDescription = launchdItem.keepAliveDescription
+            item.scheduleDescription = launchdItem.scheduleDescription
+            item.environment = launchdItem.environment
+            item.sourceCreatedAt = launchdItem.sourceCreatedAt
+            item.sourceModifiedAt = launchdItem.sourceModifiedAt
+            item.targetExists = launchdItem.targetExists
+            return item
+        }
+
         let signatureInspector = CodeSignatureInspector()
         let runtimeInspector = RuntimeInspector()
         let attributionResolver = AttributionResolver()

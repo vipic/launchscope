@@ -132,7 +132,16 @@ final class DashboardStore: ObservableObject {
     }
 
     func availableControlAction(for item: StartupItem) -> StartupItemControlAction? {
-        StartupItemController().availableAction(for: item)
+        guard item.source == .userLaunchAgent || item.source == .homebrewService else { return nil }
+        return StartupItemController().availableAction(for: item)
+    }
+
+    func firstObservedAt(for item: StartupItem) -> Date? {
+        let key = ScanSnapshotItem(item: item).key
+        return snapshotHistory
+            .filter { snapshot in snapshot.items.contains { $0.key == key } }
+            .map(\.scannedAt)
+            .min()
     }
 
     func performControl(

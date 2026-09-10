@@ -3,23 +3,12 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var dashboardStore: DashboardStore
     @ObservedObject var updateStore: AppUpdateStore
-    @AppStorage(PreferenceKeys.hideAppleItems) private var hideAppleItems = true
-    @AppStorage(PreferenceKeys.hideTrustedItems) private var hideTrustedItems = false
-    @AppStorage(PreferenceKeys.groupByOwner) private var groupByOwner = true
     @AppStorage(PreferenceKeys.showSensitiveValues) private var showSensitiveValues = false
     @AppStorage(PreferenceKeys.automaticallyCheckForUpdates) private var automaticallyCheckForUpdates = true
 
     var body: some View {
         TabView {
             Form {
-                Section("列表") {
-                    Toggle("按所属应用归组", isOn: $groupByOwner)
-                        .accessibilityIdentifier("settings.group-by-owner")
-                    Toggle("隐藏 Apple 项目", isOn: $hideAppleItems)
-                        .accessibilityIdentifier("settings.hide-apple-items")
-                    Toggle("隐藏已信任项目", isOn: $hideTrustedItems)
-                        .accessibilityIdentifier("settings.hide-trusted-items")
-                }
                 Section("隐私") {
                     Toggle("显示敏感配置值", isOn: $showSensitiveValues)
                         .accessibilityIdentifier("settings.show-sensitive-values")
@@ -30,25 +19,6 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
             .tabItem { Label("通用", systemImage: "gearshape") }
-
-            Form {
-                Section("新增项目提醒") {
-                    Toggle("提醒新增且尚未确认的第三方项目", isOn: Binding(
-                        get: { dashboardStore.notificationsEnabled },
-                        set: { dashboardStore.setNotificationsEnabled($0) }
-                    ))
-                    .accessibilityIdentifier("settings.notifications")
-                    Text("只有在你主动开启并授予系统通知权限后才会发送；相同变化不会重复提醒。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if let error = dashboardStore.notificationError {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(LaunchScopePalette.warning)
-                    }
-                }
-            }
-            .formStyle(.grouped)
-            .tabItem { Label("通知", systemImage: "bell") }
 
             Form {
                 Section("软件更新") {
@@ -90,7 +60,7 @@ struct SettingsView: View {
                 }
                 Text("LaunchScope")
                     .font(.title2.bold())
-                Text("macOS 启动项审计面板")
+                Text("macOS 自启动说明书")
                     .foregroundStyle(.secondary)
                 Text("版本 \(versionDescription)")
                     .font(.caption)

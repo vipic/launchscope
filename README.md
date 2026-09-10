@@ -1,88 +1,53 @@
 # LaunchScope
 
-LaunchScope 是一个 macOS 原生启动项审计面板，把分散在 launchd、后台任务、Homebrew、Cron 与 Shell 配置中的自动运行项目集中展示。
+LaunchScope 是一份 macOS 自启动说明书。它把系统设置没有完整展示的
+LaunchAgent、LaunchDaemon、后台项目和 Homebrew 服务放在一起，帮助用户回答：
 
-普通启动和“重新扫描”不会调用需要管理员授权的 `sfltool`。需要更新系统后台任务时，请点击工具栏中的“更新系统后台项目”；成功结果会缓存在 Application Support，后续启动直接展示。
+- 这是什么项目，由谁或什么方式加入；
+- 它什么时候出现、什么时候会运行；
+- 它实际执行什么命令、参数和环境变量；
+- 如何停止自启动，以及之后如何恢复。
 
-扫描与诊断默认保持只读。对于当前用户 `~/Library/LaunchAgents` 中的非 Apple 项目，LaunchScope 额外提供可恢复的停用与启用：只修改 launchd 允许状态并加载或卸载任务，不删除或改写 plist。
+## 当前能力
 
-## 第一版能力
+- 扫描第三方登录项、后台项目、用户及全局 LaunchAgent、LaunchDaemon 和 Homebrew services。
+- 将 Cron 与 Shell 初始化命令放在“相关自动任务”，明确它们不一定属于开机启动。
+- 同一 Homebrew 服务的状态记录与 launchd 配置合并展示，保留完整命令、参数、环境变量和启动条件。
+- 展示配置文件创建/修改时间，以及 LaunchScope 首次发现时间；时间证据会说明自身限制，不冒充精确安装时间。
+- 分别展示已配置、已允许、已加载和正在运行等状态。
+- 为当前用户 LaunchAgent 和无 sudo 的 Homebrew 服务提供“停止自启动/恢复自启动”。
+- 操作前二次确认，操作后自动复扫；不删除或改写 LaunchAgent plist，并保留操作记录与恢复入口。
+- 默认遮挡疑似令牌、密码和密钥的环境变量。
+- 单个来源扫描失败时显示“扫描问题”，其他来源继续工作。
 
-- 扫描用户、全局与系统 `LaunchAgents` / `LaunchDaemons`
-- 尝试读取 macOS Background Task Management；超时会明确降级
-- 识别 Homebrew services、用户 crontab 与常见 Shell 配置
-- 读取 `RunAtLoad`、`KeepAlive`、定时、路径监听、参数、环境变量等配置
-- 查询 launchd 加载/运行状态、PID 与上次退出码
-- 读取代码签名类型、签名标识、Team ID 与证书链
-- 使用 App Bundle 和 Apple `attributions.plist` 归因到主应用并显示应用图标
-- 将同一应用的多个 Helper、Launcher、Quick Look 与缩略图扩展按组件角色归组，说明其通常影响的功能；提示用于辅助判断，不替代厂商文档
-- 按第三方、Apple、运行中、目标缺失、已停用及来源筛选
-- 支持搜索、按所属应用归组、显示原始配置和扫描提示
-- 默认遮挡可能包含密码或令牌的配置值
-- 按来源说明推荐处置方式，并可打开系统登录项设置或定位所属应用与配置
-- 生成并复制经过参数转义的只读诊断命令；复制不会执行，实际控制使用独立的确认流程
-- 对当前用户的第三方 LaunchAgent 提供二次确认、自动复扫和可恢复的停用/启用
-- 通过无 `sudo` 的 `brew services stop/start` 安全停止或启动当前用户 Homebrew 服务
-- 保存最近 100 条脱敏操作历史，并在当前状态仍匹配时提供安全撤销
-- 使用脱敏扫描快照展示相邻两次扫描之间的新增、移除与关键状态变化
-- 导出 JSON/CSV 脱敏审计报告，导出前可预览字段并选择当前筛选或全部项目
-- 为项目保存备注与标签、加入信任名单、隐藏已信任项目，并突出显示新增未信任项目
-- 可选开启新增第三方未信任项目通知；通知需系统授权，并对相同扫描变化去重
-- 可恢复地停用单条 Cron 规则或结构简单的 Shell 配置行；操作前校验完整文件指纹和目标原文
-- 通过恢复中心集中查看可恢复项目、当前可撤销操作和最近操作记录
-- 按需对当前运行项目采样 CPU、常驻内存和运行时长，不启用持续后台监控
-- 使用 SMAppService 注册应用包内的管理员辅助程序，并通过代码签名要求双向验证 XPC 对端
-- 通过窄权限辅助接口安全停用或恢复当前用户的全局 LaunchAgent 实例
-- 通过相同的独立校验安全停用或恢复系统级非 Apple LaunchDaemon
-- 以“未见异常 / 信息不足 / 待核实 / 优先核查”表达核查结论；正常启动条件和未知签名不单独升级，评级不是恶意软件判定
-- 将目标缺失、待核实线索、多来源关联与系统参考分开；Homebrew/BTM 与 launchd 的多视图、Apple 多域注册不作为已确认冲突
-- 保留最近 30 次脱敏扫描快照，以时间线查看首次发现、状态变化、移除和控制操作，并可选择两个扫描点比较
-- 完善 VoiceOver 语义、键盘筛选与工具栏快捷键，并为 5,000 项数据分析和签名应用辅助功能 UI 冒烟提供自动化验收
-- 提供原生设置面板，集中管理列表、隐私、通知与自动更新检查偏好
-- 每天最多检查一次 GitHub 最新正式版本；用户点击“立即更新”后，应用会自动下载 DMG、校验 SHA-256/版本/签名，替换当前应用并重启
+普通启动和“重新扫描”不会调用需要管理员授权的 sfltool。需要更新系统后台记录时，
+请点击工具栏中的“更新系统后台项目”；成功结果会缓存在 Application Support。
+
+## 产品边界
+
+- Apple 系统任务默认不进入主体验。
+- 全局 LaunchAgent 与 LaunchDaemon 当前只读，不在精简版中提供管理员控制。
+- Cron 与 Shell 配置当前只读，不由 LaunchScope 修改。
+- “配置创建时间”来自文件系统，可能因升级或重新安装而变化。
+- “首次发现”只表示 LaunchScope 第一次观察到该项目。
+- “加入原因”来自配置来源的证据化解释；无法从现有文件确定具体创建者时会明确说明。
+- 指向 Documents、Desktop、Downloads、iCloud Drive 等受保护目录的项目只展示已注册路径，不主动读取目标文件。
 
 ## 开发
 
 要求 macOS 26+、Swift 6 工具链和 mise。
 
-```bash
-mise tasks
-mise run check
-mise run deploy
+    mise tasks
+    mise run check
+    mise run deploy
+    mise run test:ui
+    mise run snapshot:test
 
-# 需要辅助功能自动化权限；部署签名 Dev.app 后运行 UI 冒烟
-mise run test:ui
-# 验证启动项列表视觉快照
-mise run snapshot:test
-```
+deploy 会组装 ~/Applications/LaunchScope Dev.app，并使用 CODESIGN_IDENTITY 指定的稳定证书
+（默认 Nekutai）签名。证书缺失时会停止，不会回退到 ad-hoc 签名。
 
-`deploy` 会组装 `~/Applications/LaunchScope Dev.app` 并使用 `${CODESIGN_IDENTITY:-Nekutai}` 签名。没有稳定证书时脚本会停止，不会使用 ad-hoc 签名；此时仍可通过 `mise run build` 和 `mise run test` 完成开发验证。
+正式发布使用 mise run release -- <x.y.z>。完整流程见
+[发布检查清单](docs/RELEASE_CHECKLIST.md)。
 
-正式发布使用 `mise run release -- <x.y.z>`；也可先用 `mise run version:next` 查看建议版本，或用 `mise run release:auto` 只构建本地制品。命令要求工作区干净，强制执行统一验证，验收应用结构与稳定签名，验证美化 DMG 内的应用及 `/Applications` 拖放快捷入口，并生成 SHA-256 校验文件。阶段耗时和完整命令输出保存在已忽略的 `.local/logs/`，可用 `mise run logs:release` 查看。完整流程见 [发布检查清单](docs/RELEASE_CHECKLIST.md)。
-
-当前公开制品使用稳定自签名证书，但没有 Apple Developer ID 公证。首次打开时可能遇到 Gatekeeper 提示，需要在系统设置中明确允许；CI 只执行源码与 release 编译验证，不生成或上传正式 DMG。
-
-应用内更新从 `vipic/launchscope` 的 GitHub 最新 Release 获取 DMG 与 `.sha256`，完成校验后自动安装；不会在后台静默替换应用。
-
-## 信息边界
-
-- 默认列表提供核查摘要与后台记录时间；“尚未确认”仅表示用户没有标记信任，不代表项目可疑。侧栏发现数量仅计待核实线索，关联与系统参考需主动展开。
-- BTM 相对 URL 基于父应用解析并解码；无法解析、路径越界或位于受保护目录时保持未知。缓存状态超过 24 小时会提示更新，更新仍需用户主动触发系统授权。
-- 详情优先呈现结论、状态和操作，原始配置默认折叠；恢复中心、时间线、扫描变化与导出提供文字入口，恢复历史显示来源、时间和结果。
-
-- `sfltool dumpbtm` 在部分系统上可能阻塞，因此扫描设置了 8 秒上限；扫描始终在后台执行。
-- Shell 配置中的命令代表打开登录 Shell 或终端时可能执行，不一定属于严格意义的开机启动。
-- LaunchScope 不会删除、移动或改写启动项 plist；用户 LaunchAgent 的停用状态由 launchd override 管理。
-- “建议操作”中的命令仅用于读取状态；LaunchScope 不会自动执行这些命令。
-- Apple 系统项目保持只读；全局 Agent 与 LaunchDaemon 仅通过正式签名的窄权限辅助程序管理，Homebrew 操作不使用管理员权限。
-- Cron 与简单 Shell 单行支持带指纹校验的可逆停用；复杂控制结构、符号链接和不安全所有权继续保持只读。
-- 操作历史只记录项目标识、来源、动作、前后状态和结果，不记录路径、参数、环境变量或原始配置。
-- 扫描快照使用哈希稳定键，不保存路径、参数、环境变量、Cron 命令或原始配置。
-- 审计导出默认排除路径、参数、环境变量、原始配置、PID 与证书链；用户备注默认不导出。
-- 备注与信任名单只以来源和标识组成的脱敏键关联项目，不保存启动路径或原始配置。
-- 新增项目通知默认关闭，只在用户主动开启并授予系统通知权限后发送。
-- Cron 与 Shell 停用只写入带原文的 LaunchScope 注释标记，不删除命令；文件、目标行或所有权不匹配时拒绝操作。
-- 含多行控制结构、续行或 heredoc 的 Shell 配置保持只读；符号链接、非当前用户文件和允许列表外路径不修改。
-- 指向 Documents、Desktop、Downloads、iCloud Drive 等受保护目录的项目只展示已注册路径，不主动读取目标文件，因此不会因后台扫描索要目录权限。
-
-更多设计和验收说明见 [docs/PRODUCT.md](docs/PRODUCT.md)。
+应用内更新只会在用户点击“立即更新”后下载正式 DMG，校验版本、签名和 SHA-256，
+再替换当前应用并重启。

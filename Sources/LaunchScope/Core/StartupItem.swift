@@ -130,6 +130,8 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
     var displayName: String
     var source: StartupSource
     var sourcePath: String?
+    var sourceCreatedAt: Date?
+    var sourceModifiedAt: Date?
     var executablePath: String?
     var arguments: [String]
     var workingDirectory: String?
@@ -153,6 +155,8 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
         displayName: String? = nil,
         source: StartupSource,
         sourcePath: String? = nil,
+        sourceCreatedAt: Date? = nil,
+        sourceModifiedAt: Date? = nil,
         executablePath: String? = nil,
         arguments: [String] = [],
         workingDirectory: String? = nil,
@@ -175,6 +179,8 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
         self.displayName = displayName ?? label
         self.source = source
         self.sourcePath = sourcePath
+        self.sourceCreatedAt = sourceCreatedAt
+        self.sourceModifiedAt = sourceModifiedAt
         self.executablePath = executablePath
         self.arguments = arguments
         self.workingDirectory = workingDirectory
@@ -243,13 +249,35 @@ struct StartupItem: Identifiable, Codable, Hashable, Sendable {
             runtime.state.title
         }
     }
+    var groupIdentifier: String {
+        if label.hasPrefix("homebrew.mxcl.") {
+            return "owner:\(String(label.dropFirst("homebrew.mxcl.".count)).lowercased())"
+        }
+        if let name = attribution?.displayName,
+           !name.isEmpty,
+           name.localizedCaseInsensitiveCompare("Unknown Developer") != .orderedSame {
+            return "owner:\(name.lowercased())"
+        }
+        if let identifier = attribution?.bundleIdentifier, !identifier.isEmpty {
+            return "bundle:\(identifier.lowercased())"
+        }
+        if let path = attribution?.bundlePath, !path.isEmpty { return "bundle-path:\(path)" }
+        switch source {
+        case .shellConfiguration: return "shell:\(sourcePath ?? id)"
+        case .cron: return "cron:\(sourcePath ?? id)"
+        case .homebrewService: return "owner:\(displayName.lowercased())"
+        default: return "item:\(id)"
+        }
+    }
     var groupName: String {
+        if label.hasPrefix("homebrew.mxcl.") {
+            return String(label.dropFirst("homebrew.mxcl.".count))
+        }
         if let name = attribution?.displayName, !name.isEmpty { return name }
         switch source {
         case .shellConfiguration: return "Shell 配置"
         case .cron: return "Cron 任务"
-        case .homebrewService: return "Homebrew 服务"
-        default: return "未归因项目"
+        default: return displayName
         }
     }
     var searchableText: String {

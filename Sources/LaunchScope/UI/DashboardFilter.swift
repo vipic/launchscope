@@ -32,7 +32,7 @@ enum DashboardFilter: Hashable, Identifiable {
     var title: String {
         switch self {
         case .all: "全部项目"
-        case .thirdParty: "第三方与自定义"
+        case .thirdParty: "自启动项目"
         case .apple: "Apple 系统项"
         case .running: "正在运行"
         case .missingTarget: "目标已缺失"
@@ -40,7 +40,7 @@ enum DashboardFilter: Hashable, Identifiable {
         case .untrusted: "尚未确认"
         case .highRisk: "待核查项目"
         case .findings: "发现与关联"
-        case .issues: "扫描提示"
+        case .issues: "扫描问题"
         case .source(let source): source.title
         }
     }
