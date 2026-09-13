@@ -41,7 +41,6 @@ LaunchAgent、LaunchDaemon、后台项目和 Homebrew 服务放在一起，帮�
     mise run check
     mise run deploy
     mise run test:ui
-    mise run snapshot:test
 
 deploy 会组装 ~/Applications/LaunchScope Dev.app，并使用 CODESIGN_IDENTITY 指定的稳定证书
 （默认 Nekutai）签名。证书缺失时会停止，不会回退到 ad-hoc 签名。

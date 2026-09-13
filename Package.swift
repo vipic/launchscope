@@ -38,7 +38,6 @@ let package = Package(
             name: "LaunchScopeTests",
             dependencies: ["LaunchScope", "LaunchScopePrivilegedProtocol", "LaunchScopePrivilegedCore"],
             path: "Tests/LaunchScopeTests",
-            exclude: ["__Snapshots__"],
             resources: [.copy("Fixtures")]
         ),
         .executableTarget(

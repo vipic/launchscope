@@ -41,7 +41,7 @@ mise run check
 - `Registered / Allowed / Loaded / Running` 不得合并成一个布尔值。
 - 新增外部命令必须通过 `CommandRunning`，必须设置超时并捕获 stderr。
 
-<!-- workspace-policy:start hash=841531e97fe1 -->
+<!-- workspace-policy:start hash=ef067e1f1bbd -->
 ## 跨项目统一规则
 
 以下区块由私有 `workspace-meta` 生成；项目专属规则请写在区块外。
@@ -65,6 +65,7 @@ mise run check
 
 - [VERIFY-001] 修改后运行仓库声明的统一验证入口；涉及页面流程时补跑对应 E2E。
 - [TEST-001] 测试按风险添加，优先覆盖非平凡逻辑、稳定契约、安全边界和缺陷回归；静态配置与简单透传通常使用语法检查、构建或验收验证，不因每次改动机械新增测试。
+- [TEST-002] 不为 UI 展现层编写单元测试或快照测试；界面外观与页面交互通过 E2E、视觉验收或人工验收覆盖，可脱离 UI 的业务逻辑仍按风险编写单元测试。
 
 ### 依赖
 
