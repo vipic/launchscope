@@ -41,7 +41,7 @@ mise run check
 - `Registered / Allowed / Loaded / Running` 不得合并成一个布尔值。
 - 新增外部命令必须通过 `CommandRunning`，必须设置超时并捕获 stderr。
 
-<!-- workspace-policy:start hash=77bf8234812e -->
+<!-- workspace-policy:start hash=d2c2bdbb9d57 -->
 ## 跨项目统一规则
 
 以下区块由私有 `workspace-meta` 生成；项目专属规则请写在区块外。
@@ -60,6 +60,11 @@ mise run check
 
 - [SAFE-001] 保留用户已有和无关改动，不做顺手重构，不使用破坏性 Git 或文件操作。
 - [SAFE-002] 不得提交 `.env`、密钥、个人数据、日志、报告、缓存或构建产物。
+- [SAFE-003] 运行日志、诊断信息和错误输出默认不得包含密钥、令牌、正文或完整个人数据；必要上下文先脱敏并限制长度。
+
+### 错误处理
+
+- [ERROR-001] 数据源、解析、扫描或批处理的局部失败必须保留上下文并汇总报告，不得静默伪装为空结果或成功；无法安全继续时停止写入。
 
 ### 验证
 
